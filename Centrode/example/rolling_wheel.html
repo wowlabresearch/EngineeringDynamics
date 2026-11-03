@@ -54,8 +54,7 @@ button:active { transform: scale(0.98); }
 <svg width="100%" viewBox="0 0 680 462" role="img">
 <title>구르는 바퀴의 속도와 centrode</title>
 <desc>위쪽은 지면에서 본 모습으로 바퀴가 오른쪽으로 구르고 점 A, B의 속도 화살표가 표시됩니다. 아래쪽은 바퀴에서 본 모습으로 바퀴가 멈춰 있고 지면이 바퀴 둘레를 돕니다.</desc>
-<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></marker>
-<clipPath id="wheelClip"><rect x="130" y="288" width="420" height="168" rx="12"></rect></clipPath></defs>
+<defs><clipPath id="wheelClip"><rect x="130" y="288" width="420" height="168" rx="12"></rect></clipPath></defs>
 <text class="th" x="340" y="18" text-anchor="middle">지면에 서서 본 모습</text>
 <text class="ts" x="340" y="36" text-anchor="middle">지면(공간 centrode)이 멈춰 있고 바퀴가 구름</text>
 <g id="W"></g>
@@ -94,7 +93,7 @@ const sq=(x,y,c)=>`<rect x="${f(x-3.5)}" y="${f(y-3.5)}" width="7" height="7" fi
 const tx=(x,y,s,c)=>`<text class="th" x="${f(x)}" y="${f(y)}" text-anchor="middle" dominant-baseline="central"${c?` style="fill:${c}"`:''}>${s}</text>`;
 function arc(cx,cy,r,a0,a1,c,w){if(Math.abs(a1-a0)<.001)return'';let d='';for(let i=0;i<=72;i++){const a=a0+(a1-a0)*i/72;d+=(i?'L':'M')+f(cx+r*Math.cos(a))+' '+f(cy-r*Math.sin(a))}return `<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`}
 const ticks=[0,1,2,3,4,5,6,7,8].map(k=>k*PI/4);
-function arrow(x,y,vx,vy,c,name){const n=Math.hypot(vx,vy);if(n<4)return'';const ex=x+vx,ey=y-vy;return ln(x,y,ex,ey,c,2.5,'marker-end="url(#arrow)"')+tx(ex+vx/n*14,ey-vy/n*14,name,c)}
+function arrow(x,y,vx,vy,c,name){const n=Math.hypot(vx,vy);if(n<4)return'';const ex=x+vx,ey=y-vy,ux=vx/n,uy=-vy/n,hl=10,hc=Math.cos(.5),hs=Math.sin(.5);return ln(x,y,ex,ey,c,2.5)+ln(ex,ey,ex-hl*(ux*hc-uy*hs),ey-hl*(uy*hc+ux*hs),c,2.5)+ln(ex,ey,ex-hl*(ux*hc+uy*hs),ey-hl*(uy*hc-ux*hs),c,2.5)+tx(ex+vx/n*14,ey-vy/n*14,name,c)}
 function draw(deg){
 const phi=deg*PI/180,s=phi*R,cx=X0+s,cy=GY-R;
 let w=ln(30,GY,650,GY,SP,1.5,'stroke-dasharray="3 4" opacity="0.6"');
