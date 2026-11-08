@@ -164,7 +164,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--rot); outli
         <p class="note" id="expNote" hidden></p>
       </div>
       <div class="card">
-        <h2>속도 벡터 합성 (머리-꼬리 연결)</h2>
+        <h2>속도 벡터의 합 (위치 그림 아님)</h2>
         <canvas id="poly" role="img" aria-label="속도 벡터를 머리와 꼬리로 연결한 합성 그림"></canvas>
       </div>
       <div class="card">
@@ -185,7 +185,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--rot); outli
       <button class="btn primary" id="play">일시정지</button>
       <button class="btn" id="step">한 단계</button>
       <button class="btn" id="slow" aria-pressed="false">슬로모션</button>
-      <button class="btn" id="pin" aria-pressed="false">이 순간의 P 고정</button>
       <button class="btn" id="clear">궤적 지우기</button>
     </div>
     <div class="sliders">
@@ -222,7 +221,7 @@ const sub = (a,b)=>({x:a.x-b.x,y:a.y-b.y});
 
 const O = {x:-430,y:-170}, E_B = {x:Math.cos(.35),y:Math.sin(.35)}, B_MAX = 160;
 const TH0 = 35*Math.PI/180;
-const st = {theta:TH0, s:0, dirS:1, b:0, dirB:1, omega:.5, sdot:80, vb:60, pin:null, eq:null, playing:!reduce, slow:false, view:0, from:0, u:1, trail:[], acc:0};
+const st = {theta:TH0, s:0, dirS:1, b:0, dirB:1, omega:.5, sdot:80, vb:60, eq:null, stamps:[], playing:!reduce, slow:false, view:0, from:0, u:1, trail:[], acc:0};
 { let lo=0,best=1e9; for(let i=0;i<=N;i++){const p=bez(i/N),d=Math.hypot(p.x-212,p.y-215); if(d<best){best=d;lo=i;}} st.s=table[lo].l; }
 
 function frame(){
@@ -242,7 +241,7 @@ function advance(dt){
   if(st.acc>.05){
     st.acc=0;
     const f=frame();
-    st.trail.push({th:st.theta,rB:f.rB,r:f.r,p:st.pin?rot(st.pin,st.theta):null});
+    st.trail.push({th:st.theta,rB:f.rB,r:f.r});
     if(st.trail.length>420) st.trail.shift();
   }
 }
@@ -355,7 +354,6 @@ function draw(){
     ctx.globalAlpha=1;
   }
   trail('r',C.abs);
-  if(st.pin) trail('p',C.pin);
 
   // ω arc and B
   if(st.view!==2&&st.omega!==0){
@@ -422,14 +420,20 @@ function draw(){
     ctx.strokeStyle=C.muted;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p3.x,p3.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
   }
   // Point P and particle A
-  if(st.pin){
-    const s=Tp(st.pin);ctx.fillStyle=C.pin;ctx.beginPath();ctx.arc(s.x,s.y,6,0,7);ctx.fill();
-    label(ctx,s.x-14,s.y-13,'P','',C.pin,16);
-    if(st.view===2) label(ctx,s.x,s.y+22,'v','P/B = 0',C.pin,15);
-  } else {
+  // P exists only in a frozen instant, so it is drawn only while paused.
+  if(!st.playing){
+    st.stamps.forEach((w,i)=>{
+      const m=Tp(w);ctx.strokeStyle=C.pin;ctx.lineWidth=1.6;ctx.globalAlpha=.3+.5*(i+1)/st.stamps.length;
+      ctx.beginPath();ctx.arc(m.x,m.y,5,0,7);ctx.stroke();ctx.globalAlpha=1;
+      if(i===st.stamps.length-1) label(ctx,m.x-30,m.y+4,'이전 P','',C.pin,12,false);
+    });
+    ctx.fillStyle=C.pin;ctx.globalAlpha=.2;ctx.beginPath();ctx.arc(a.x,a.y,11,0,7);ctx.fill();ctx.globalAlpha=1;
     ctx.strokeStyle=C.pin;ctx.lineWidth=2;ctx.beginPath();ctx.arc(a.x,a.y,11,0,7);ctx.stroke();
-    label(ctx,a.x-22,a.y+15,'P','',C.pin,16);
+    label(ctx,a.x-24,a.y-15,'P','',C.pin,16);
+    if(st.view===2) label(ctx,a.x-52,a.y+30,'v','P/B = 0',C.pin,15);
   }
+  ctx.font=`500 13px ${C.sans}`;ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle=C.muted;
+  ctx.fillText(st.playing?'일시정지하면 그 순간의 P가 표시됨':'이 순간 A와 겹친 평판의 점 = P ('+'한 단계를 누르면 다음 순간의 P)',12,10);
   ctx.fillStyle=C.fg;ctx.strokeStyle=C.panel;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(a.x,a.y,6,0,7);ctx.fill();ctx.stroke();
   label(ctx,a.x+15,a.y+14,'A','',C.fg,16,false);
 
@@ -459,7 +463,6 @@ function drawPolyEq(f,M,w,h){
   if(e===3){arrow(pc,n[1].x,n[1].y,n[3].x-n[1].x,n[3].y-n[1].y,C.pin,3.4);lab(n[1],n[3],1,'v','A/B',C.pin);}
   arrow(pc,n[0].x,n[0].y,n[3].x-n[0].x,n[3].y-n[0].y,C.abs,3.4);lab(n[0],n[3],-1,'v','A',C.abs);
   pc.fillStyle=C.fg;n.forEach(p=>{pc.beginPath();pc.arc(p.x,p.y,3,0,7);pc.fill();});
-  ['','B','P','A'].forEach((t,i)=>{if(t)label(pc,n[i].x+11,n[i].y-11,t,'',C.fg,14,false);});
 }
 function drawPoly(f,M){
   const w=poly.clientWidth,h=poly.clientHeight;
@@ -505,9 +508,9 @@ const VIEWS=[
  {title:'지면의 관측자가 재는 A의 속도',terms:[1,1,1],lhs:'<b>v</b><sub>A</sub>',sum:'|<b>v</b><sub>A</sub>|',
   note:'세 항이 모두 보임. 지면의 점들은 멈춰 있고, 평판은 이동하면서 회전함.'},
  {title:'B와 함께 이동하는 관측자가 재는 A의 속도',terms:[0,1,1],lhs:'<b>v</b><sub>A/B</sub>',sum:'|<b>v</b><sub>A/B</sub>|',
-  note:'B가 멈춰 보이므로 <b>v</b><sub>B</sub>가 사라짐. 평판의 회전은 그대로 보이고, 평판의 점 P는 B 둘레로 원을 그림. 이때 P의 속도가 <b>v</b><sub>P/B</sub> = <b>ω</b> × <b>r</b>임.'},
+  note:'B가 멈춰 보이므로 <b>v</b><sub>B</sub>가 사라짐. 평판의 회전은 그대로 보이고, A와 겹친 평판의 점 P는 그 순간 B를 중심으로 회전함. 이때 P의 속도가 <b>v</b><sub>P/B</sub> = <b>ω</b> × <b>r</b>임.'},
  {title:'평판 위의 관측자가 재는 A의 속도',terms:[0,0,1],lhs:'<b>v</b><sub>rel</sub>',sum:'|<b>v</b><sub>rel</sub>| = ṡ',
-  note:'평판이 멈춰 보이고 지면이 대신 돎. x-y에서 P는 움직이지 않으므로 <b>v</b><sub>P/B</sub> = 0이고, A는 슬롯 접선 방향으로 ṡ로만 움직임.'}
+  note:'평판이 멈춰 보이고 지면이 대신 돎. P는 평판의 점이라 x-y에서 움직이지 않음(<b>v</b><sub>P/B</sub> = 0). A는 슬롯 접선 방향으로 ṡ로만 움직임.'}
 ];
 const A_='<span class="abs"><b>v</b><sub>A</sub></span>', B_='<span class="base"><b>v</b><sub>B</sub></span>', PB='<span class="rot"><b>v</b><sub>P/B</sub></span>', AP='<span class="rel"><b>v</b><sub>A/P</sub></span>';
 const EQS=[
@@ -543,22 +546,17 @@ function setView(i){
 [0,1,2].forEach(n=>$('v'+n).onclick=()=>{st.eq=null;setView(n);renderEq();lastR=0;draw();});
 [0,1,2,3].forEach(n=>$('e'+n).onclick=()=>{
   st.eq=st.eq===n?null:n;
-  if(st.eq!==null){if(st.pin)$('pin').click();setView(EQS[n].view);}
+  if(st.eq!==null){setView(EQS[n].view);}
   renderEq();lastR=0;draw();
 });
 
-$('play').onclick=()=>{st.playing=!st.playing;$('play').textContent=st.playing?'일시정지':'재생';};
+$('play').onclick=()=>{st.playing=!st.playing;st.stamps=[];$('play').textContent=st.playing?'일시정지':'재생';draw();};
 $('play').textContent=st.playing?'일시정지':'재생';
-$('step').onclick=()=>{st.playing=false;$('play').textContent='재생';advance(.1);lastR=0;draw();};
+$('step').onclick=()=>{if(st.playing)st.stamps=[];st.playing=false;$('play').textContent='재생';const q=onSlot(st.s);st.stamps.push({x:q.x,y:q.y});if(st.stamps.length>6)st.stamps.shift();advance(.3);lastR=0;draw();};
 $('slow').onclick=()=>{st.slow=!st.slow;$('slow').setAttribute('aria-pressed',st.slow);};
-$('pin').onclick=()=>{
-  if(st.pin){st.pin=null;$('pin').textContent='이 순간의 P 고정';$('pin').setAttribute('aria-pressed','false');}
-  else{const q=onSlot(st.s);st.pin={x:q.x,y:q.y};$('pin').textContent='P 고정 해제';$('pin').setAttribute('aria-pressed','true');}
-  draw();
-};
 $('clear').onclick=()=>{st.trail=[];draw();};
 const setters={},EXP={sd:'ṡ = 0이면 A가 평판에 붙어 P와 함께 움직임. <b>v</b><sub>A/P</sub> = 0이므로 <b>v</b><sub>A</sub> = <b>v</b><sub>P</sub>임.',w:'ω = 0이면 평판은 병진만 함. <b>v</b><sub>P/B</sub> = 0이므로 <b>v</b><sub>A/B</sub> = <b>v</b><sub>rel</sub>임.',vb:'v<sub>B</sub> = 0이면 B가 고정됨. <b>v</b><sub>A</sub> = <b>v</b><sub>A/B</sub>이고 <b>v</b><sub>P</sub> = <b>v</b><sub>P/B</sub>임.'},saved={};
-function showExp(){const on=Object.keys(EXP).filter(k=>saved[k]!==undefined);$('expNote').hidden=!on.length;$('note').hidden=!!on.length;$('expNote').innerHTML=on.map(k=>EXP[k]).join('<br>');}
+function showExp(){const on=Object.keys(EXP).filter(k=>saved[k]!==undefined);const msgs=on.map(k=>EXP[k]);$('expNote').hidden=!msgs.length;$('note').hidden=!!msgs.length;$('expNote').innerHTML=msgs.join('<br>');}
 function bind(id,key,out,f){const e=$(id),u=()=>{st[key]=+e.value;$(out).textContent=f(+e.value);lastR=0;};setters[id]=u;e.oninput=()=>{u();delete saved[id];$('x-'+id).setAttribute('aria-pressed','false');showExp();if(!st.playing)draw();};u();}
 ['sd','w','vb'].forEach(id=>$('x-'+id).onclick=()=>{const e=$(id);if(saved[id]===undefined){saved[id]=e.value;e.value=0;}else{e.value=saved[id];delete saved[id];}$('x-'+id).setAttribute('aria-pressed',saved[id]!==undefined);setters[id]();showExp();draw();});
 bind('w','omega','wO',v=>v.toFixed(2)+' rad/s');
