@@ -1,10 +1,15 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>회전 평판의 상대속도</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=STIX+Two+Text:ital,wght@0,500;0,700;1,500;1,700&display=swap">
 <style>
+body { margin: 0; }
+[hidden] { display: none !important; }
 /* Layout: a lab bench. The stage dominates; equation, vector sum and readouts sit in a side column. */
 :root {
   --bg: #eef2f3; --panel: #ffffff; --fg: #16242b; --muted: #5a6c75; --line: #cfd9dd;
@@ -84,8 +89,50 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--rot); outli
   .eqs button { font-size: 14.5px; padding: 6px 8px; }
   .tabs b { font-size: 14px; } .tabs button { padding: 7px 8px; }
 }
+/* Tablet and larger: one fixed screen, nothing scrolls. */
+@media (min-width: 700px) and (min-height: 600px) {
+  html, body { height: 100%; overflow: hidden; }
+  .wrap { height: 100%; max-width: none; padding-block: 10px; gap: 8px; grid-template-columns: minmax(0, 250px) minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "head tabs" "eqs eqs" "bench bench" "ctrl ctrl"; }
+  header { grid-area: head; align-self: center; }
+  h1 { font-size: 17px; line-height: 1.3; }
+  header .formula { display: none; }
+  .tabs { grid-area: tabs; } .eqs { grid-area: eqs; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tabs button { padding: 4px 10px; } .tabs b { font-size: 14px; line-height: 1.3; } .tabs span { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .eqs button { font-size: 15px; padding: 5px 8px; white-space: nowrap; overflow: hidden; }
+  .bench { grid-area: bench; min-height: 0; height: 100%; gap: 8px; grid-template-columns: minmax(0, 1fr) 340px; }
+  .stage { height: 100%; min-height: 0; }
+  #scene { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; max-height: none; }
+  .side { height: 100%; min-height: 0; gap: 8px; grid-template-rows: auto minmax(90px, 1fr) auto; }
+  .card { padding: 7px 12px; }
+  .card h2 { margin-bottom: 1px; font-size: 12px; }
+  .side > .card:first-child { overflow-y: auto; }
+  .side > .card:nth-child(2) { position: relative; min-height: 0; overflow: hidden; }
+  #poly { position: absolute; left: 8px; top: 24px; width: calc(100% - 16px); height: calc(100% - 28px); }
+  .eq { font-size: 20px; line-height: 1.35; } .eq2 { font-size: 16px; line-height: 1.3; }
+  .note { font-size: 13px; line-height: 1.45; margin-top: 3px; }
+  .exps { margin-top: 5px; } .exps .btn { padding: 3px 8px; min-height: 30px; }
+  .side > .card:last-child h2 { display: none; }
+  .rows { gap: 0; } .rows dt { font-size: 15px; line-height: 1.35; } .rows dd { font-size: 12.5px; } .rows .sum { padding-top: 2px; }
+  .controls { grid-area: ctrl; padding: 6px 12px; gap: 6px 18px; grid-template-columns: auto minmax(0, 1fr); }
+  .btn { font-size: 13px; padding: 6px 9px; min-height: 36px; } .btn.primary { min-width: 62px; }
+  .btns { flex-wrap: nowrap; gap: 5px; } .btns .btn { white-space: nowrap; }
+  .sliders { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 16px; }
+  .sliders label { font-size: 12.5px; line-height: 1.3; } .sliders .top { white-space: nowrap; } .sliders output { font-size: 12px; }
+}
+@media (min-width: 700px) and (min-height: 600px) and (orientation: portrait) {
+  .wrap { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr) auto; grid-template-areas: "head" "tabs" "eqs" "bench" "ctrl"; }
+  .bench { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 236px; }
+  .side { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, .85fr); grid-template-rows: minmax(0, 1fr); }
+  .side > .card:last-child { overflow-y: auto; }
+  .rows .calc { display: none; }
+  .rows div { flex-wrap: wrap; gap: 0 8px; }
+  .eqs button { font-size: 14px; padding: 5px 6px; }
+  .controls { grid-template-columns: minmax(0, 1fr); }
+  .btns { flex-wrap: wrap; }
+}
 </style>
-
+</head>
+<body>
 <div class="wrap">
   <header>
     <h1>5.7 상대속도: 회전 평판 위의 슬롯</h1>
@@ -142,7 +189,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--rot); outli
       <button class="btn" id="clear">궤적 지우기</button>
     </div>
     <div class="sliders">
-      <label for="w"><span class="top"><span>평판 각속도 θ̇ = ω</span><output id="wO"></output></span><input id="w" type="range" min="-1.2" max="1.2" step="0.05" value="0.5"></label>
+      <label for="w"><span class="top"><span>각속도 ω</span><output id="wO"></output></span><input id="w" type="range" min="-1.2" max="1.2" step="0.05" value="0.5"></label>
       <label for="sd"><span class="top"><span>슬롯 속력 ṡ</span><output id="sdO"></output></span><input id="sd" type="range" min="0" max="200" step="5" value="80"></label>
       <label for="vb"><span class="top"><span>B의 속력 v<sub>B</sub></span><output id="vbO"></output></span><input id="vb" type="range" min="0" max="150" step="5" value="60"></label>
     </div>
@@ -225,7 +272,7 @@ function fit(){
   W=scene.clientWidth; H=scene.clientHeight; scene.width=W*d; scene.height=H*d; ctx.setTransform(d,0,0,d,0,0);
   const w=poly.clientWidth,h=poly.clientHeight; poly.width=w*d; poly.height=h*d; pc.setTransform(d,0,0,d,0,0);
 }
-new ResizeObserver(()=>{fit();draw();}).observe(scene);
+const ro=new ResizeObserver(()=>{fit();draw();});ro.observe(scene);ro.observe(poly);
 function colors(){const s=getComputedStyle(document.documentElement);['bg','panel','fg','muted','line','plate','plate-edge','slot','dot','rel','rot','base','abs','pin','math','sans'].forEach(n=>C[n]=s.getPropertyValue('--'+n).trim());}
 colors();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',colors);
@@ -446,7 +493,7 @@ function readouts(f){
   const t=performance.now(); if(t-lastR<90) return; lastR=t;
   const rmag=Math.hypot(f.r.x,f.r.y);
   $('oB').textContent=fmt(f.vB);
-  $('oR').textContent=`${rmag.toFixed(0)}×${Math.abs(st.omega).toFixed(2)} = ${(rmag*Math.abs(st.omega)).toFixed(0)} mm/s`;
+  $('oR').innerHTML=`<span class="calc">${rmag.toFixed(0)}×${Math.abs(st.omega).toFixed(2)} = </span>${(rmag*Math.abs(st.omega)).toFixed(0)} mm/s`;
   $('oS').textContent=fmt(f.vS);
   if(st.eq===2) $('oG').textContent=fmt(add(f.vB,f.vR));
   if(st.eq===3) $('oG').textContent=fmt(add(f.vR,f.vS));
@@ -456,18 +503,18 @@ function readouts(f){
 
 const VIEWS=[
  {title:'지면의 관측자가 재는 A의 속도',terms:[1,1,1],lhs:'<b>v</b><sub>A</sub>',sum:'|<b>v</b><sub>A</sub>|',
-  note:'세 항이 모두 보입니다. 지면의 점들은 멈춰 있고, 평판은 이동하면서 회전합니다.'},
+  note:'세 항이 모두 보임. 지면의 점들은 멈춰 있고, 평판은 이동하면서 회전함.'},
  {title:'B와 함께 이동하는 관측자가 재는 A의 속도',terms:[0,1,1],lhs:'<b>v</b><sub>A/B</sub>',sum:'|<b>v</b><sub>A/B</sub>|',
-  note:'B가 멈춰 보이므로 <b>v</b><sub>B</sub>가 사라집니다. 평판의 회전은 그대로 보이고, 평판의 점 P는 B 둘레로 원을 그립니다. 이때 P의 속도가 <b>v</b><sub>P/B</sub> = <b>ω</b> × <b>r</b>입니다.'},
+  note:'B가 멈춰 보이므로 <b>v</b><sub>B</sub>가 사라짐. 평판의 회전은 그대로 보이고, 평판의 점 P는 B 둘레로 원을 그림. 이때 P의 속도가 <b>v</b><sub>P/B</sub> = <b>ω</b> × <b>r</b>임.'},
  {title:'평판 위의 관측자가 재는 A의 속도',terms:[0,0,1],lhs:'<b>v</b><sub>rel</sub>',sum:'|<b>v</b><sub>rel</sub>| = ṡ',
-  note:'평판이 멈춰 보이고 지면이 대신 돕니다. x-y에서 P는 움직이지 않으므로 <b>v</b><sub>P/B</sub> = 0이고, A는 슬롯 접선 방향으로 ṡ로만 움직입니다.'}
+  note:'평판이 멈춰 보이고 지면이 대신 돎. x-y에서 P는 움직이지 않으므로 <b>v</b><sub>P/B</sub> = 0이고, A는 슬롯 접선 방향으로 ṡ로만 움직임.'}
 ];
 const A_='<span class="abs"><b>v</b><sub>A</sub></span>', B_='<span class="base"><b>v</b><sub>B</sub></span>', PB='<span class="rot"><b>v</b><sub>P/B</sub></span>', AP='<span class="rel"><b>v</b><sub>A/P</sub></span>';
 const EQS=[
- {view:0,title:'식 ①: 계산하는 형태',eq:`${A_} = ${B_} + <span class="rot"><b>ω</b> × <b>r</b></span> + <span class="rel"><b>v</b><sub>rel</sub></span>`,note:'문제를 풀 때 쓰는 형태입니다. <b>ω</b>×<b>r</b>의 크기는 rθ̇, <b>v</b><sub>rel</sub>의 크기는 ṡ입니다.'},
- {view:0,title:'식 ②: 이름만 바꾼 형태',eq:`${A_} = ${B_} + ${PB} + ${AP}`,note:'화살표는 ①과 똑같고 이름만 바뀝니다. <b>v</b><sub>P/B</sub>는 비회전 좌표계에서 잰 B에 대한 P의 속도, <b>v</b><sub>A/P</sub>는 P에 대한 A의 속도입니다.'},
- {view:0,title:'식 ③: 앞의 두 화살표를 묶음 (P를 경유)',eq:`${A_} = <span class="grp"><b>v</b><sub>P</sub></span> + ${AP}`,eq2:'<b>v</b><sub>P</sub> = <b>v</b><sub>B</sub> + <b>v</b><sub>P/B</sub>',gn:'<b>v</b><sub>P</sub>',note:'<b>v</b><sub>P</sub>는 평판의 점 P의 절대속도이고, 평판의 병진과 회전을 모두 담습니다. 여기에 슬롯을 따른 상대운동 <b>v</b><sub>A/P</sub>를 더합니다.'},
- {view:1,title:'식 ④: 뒤의 두 화살표를 묶음 (B를 경유)',eq:`${A_} = ${B_} + <span class="grp"><b>v</b><sub>A/B</sub></span>`,eq2:'<b>v</b><sub>A/B</sub> = <b>v</b><sub>P/B</sub> + <b>v</b><sub>A/P</sub>',gn:'<b>v</b><sub>A/B</sub>',note:'화면은 B와 함께 이동하는 시점입니다. 여기서 보이는 A의 속도가 <b>v</b><sub>A/B</sub>이고, 지면 기준으로는 <b>v</b><sub>B</sub>를 더하면 <b>v</b><sub>A</sub>가 됩니다.'}
+ {view:0,title:'식 ①: 계산하는 형태',eq:`${A_} = ${B_} + <span class="rot"><b>ω</b> × <b>r</b></span> + <span class="rel"><b>v</b><sub>rel</sub></span>`,note:'문제를 풀 때 쓰는 형태임. <b>ω</b>×<b>r</b>의 크기는 rθ̇, <b>v</b><sub>rel</sub>의 크기는 ṡ임.'},
+ {view:0,title:'식 ②: 이름만 바꾼 형태',eq:`${A_} = ${B_} + ${PB} + ${AP}`,note:'화살표는 ①과 똑같고 이름만 바뀜. <b>v</b><sub>P/B</sub>는 비회전 좌표계에서 잰 B에 대한 P의 속도, <b>v</b><sub>A/P</sub>는 P에 대한 A의 속도임.'},
+ {view:0,title:'식 ③: 앞의 두 화살표를 묶음 (P를 경유)',eq:`${A_} = <span class="grp"><b>v</b><sub>P</sub></span> + ${AP}`,eq2:'<b>v</b><sub>P</sub> = <b>v</b><sub>B</sub> + <b>v</b><sub>P/B</sub>',gn:'<b>v</b><sub>P</sub>',note:'<b>v</b><sub>P</sub>는 평판의 점 P의 절대속도이고, 평판의 병진과 회전을 모두 담음. 여기에 슬롯을 따른 상대운동 <b>v</b><sub>A/P</sub>를 더함.'},
+ {view:1,title:'식 ④: 뒤의 두 화살표를 묶음 (B를 경유)',eq:`${A_} = ${B_} + <span class="grp"><b>v</b><sub>A/B</sub></span>`,eq2:'<b>v</b><sub>A/B</sub> = <b>v</b><sub>P/B</sub> + <b>v</b><sub>A/P</sub>',gn:'<b>v</b><sub>A/B</sub>',note:'화면은 B와 함께 이동하는 시점임. 여기서 보이는 A의 속도가 <b>v</b><sub>A/B</sub>이고, 지면 기준으로는 <b>v</b><sub>B</sub>를 더하면 <b>v</b><sub>A</sub>가 됨.'}
 ];
 function renderEq(){
   [0,1,2,3].forEach(n=>$('e'+n).setAttribute('aria-pressed',st.eq===n));
@@ -510,8 +557,8 @@ $('pin').onclick=()=>{
   draw();
 };
 $('clear').onclick=()=>{st.trail=[];draw();};
-const setters={},EXP={sd:'ṡ = 0이면 A가 평판에 붙어 P와 함께 움직입니다. <b>v</b><sub>A/P</sub> = 0이므로 <b>v</b><sub>A</sub> = <b>v</b><sub>P</sub>입니다.',w:'ω = 0이면 평판은 병진만 합니다. <b>v</b><sub>P/B</sub> = 0이므로 <b>v</b><sub>A/B</sub> = <b>v</b><sub>rel</sub>입니다.',vb:'v<sub>B</sub> = 0이면 B가 고정됩니다. <b>v</b><sub>A</sub> = <b>v</b><sub>A/B</sub>이고 <b>v</b><sub>P</sub> = <b>v</b><sub>P/B</sub>입니다.'},saved={};
-function showExp(){const on=Object.keys(EXP).filter(k=>saved[k]!==undefined);$('expNote').hidden=!on.length;$('expNote').innerHTML=on.map(k=>EXP[k]).join('<br>');}
+const setters={},EXP={sd:'ṡ = 0이면 A가 평판에 붙어 P와 함께 움직임. <b>v</b><sub>A/P</sub> = 0이므로 <b>v</b><sub>A</sub> = <b>v</b><sub>P</sub>임.',w:'ω = 0이면 평판은 병진만 함. <b>v</b><sub>P/B</sub> = 0이므로 <b>v</b><sub>A/B</sub> = <b>v</b><sub>rel</sub>임.',vb:'v<sub>B</sub> = 0이면 B가 고정됨. <b>v</b><sub>A</sub> = <b>v</b><sub>A/B</sub>이고 <b>v</b><sub>P</sub> = <b>v</b><sub>P/B</sub>임.'},saved={};
+function showExp(){const on=Object.keys(EXP).filter(k=>saved[k]!==undefined);$('expNote').hidden=!on.length;$('note').hidden=!!on.length;$('expNote').innerHTML=on.map(k=>EXP[k]).join('<br>');}
 function bind(id,key,out,f){const e=$(id),u=()=>{st[key]=+e.value;$(out).textContent=f(+e.value);lastR=0;};setters[id]=u;e.oninput=()=>{u();delete saved[id];$('x-'+id).setAttribute('aria-pressed','false');showExp();if(!st.playing)draw();};u();}
 ['sd','w','vb'].forEach(id=>$('x-'+id).onclick=()=>{const e=$(id);if(saved[id]===undefined){saved[id]=e.value;e.value=0;}else{e.value=saved[id];delete saved[id];}$('x-'+id).setAttribute('aria-pressed',saved[id]!==undefined);setters[id]();showExp();draw();});
 bind('w','omega','wO',v=>v.toFixed(2)+' rad/s');
@@ -530,5 +577,5 @@ function loop(now){
 draw();requestAnimationFrame(loop);
 })();
 </script>
-
-</body></html>
+</body>
+</html>
