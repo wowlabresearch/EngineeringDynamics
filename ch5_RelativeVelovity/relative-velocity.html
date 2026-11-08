@@ -1,0 +1,534 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>회전 평판의 상대속도</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=STIX+Two+Text:ital,wght@0,500;0,700;1,500;1,700&display=swap">
+<style>
+/* Layout: a lab bench. The stage dominates; equation, vector sum and readouts sit in a side column. */
+:root {
+  --bg: #eef2f3; --panel: #ffffff; --fg: #16242b; --muted: #5a6c75; --line: #cfd9dd;
+  --plate: #dcecf6; --plate-edge: #49626f; --slot: #fbfdfe; --dot: #b7c5cb;
+  --rel: #d0185f; --rot: #1766cc; --base: #b86a00; --abs: #05835b; --pin: #6a3fc0;
+  --sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --math: "STIX Two Text", "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10181d; --panel: #18232a; --fg: #e6eef1; --muted: #93a6af; --line: #2f3f48;
+  --plate: #1f3a4b; --plate-edge: #8fb0c0; --slot: #10181d; --dot: #35464f;
+  --rel: #ff6fa5; --rot: #6cb0ff; --base: #f0ac4a; --abs: #4bd8a6; --pin: #b99cff; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #10181d; --panel: #18232a; --fg: #e6eef1; --muted: #93a6af; --line: #2f3f48;
+  --plate: #1f3a4b; --plate-edge: #8fb0c0; --slot: #10181d; --dot: #35464f;
+  --rel: #ff6fa5; --rot: #6cb0ff; --base: #f0ac4a; --abs: #4bd8a6; --pin: #b99cff; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; display: grid; gap: 14px; }
+header { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; }
+h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
+.formula { font-family: var(--math); font-size: 19px; }
+.tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.tabs button { text-align: left; padding: 9px 12px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 6px; cursor: pointer; font: inherit; min-width: 0; }
+.tabs b { display: block; font-size: 15px; }
+.tabs span { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.tabs button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.tabs button[aria-pressed="true"] span { color: inherit; opacity: .78; }
+.bench { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; }
+.stage { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+#scene { display: block; width: 100%; aspect-ratio: 5 / 4; max-height: 76vh; touch-action: manipulation; }
+.side { display: grid; gap: 10px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; min-width: 0; }
+.card h2 { font-size: 12.5px; color: var(--muted); font-weight: 500; margin: 0 0 6px; letter-spacing: .02em; }
+.eq { font-family: var(--math); font-size: 23px; white-space: nowrap; overflow-x: auto; line-height: 1.5; }
+.eq sub { font-size: .62em; }
+.eq .t { transition: opacity .25s; }
+.eq .off { opacity: .28; text-decoration: line-through; }
+.rel { color: var(--rel); } .rot { color: var(--rot); } .base { color: var(--base); } .abs { color: var(--abs); }
+.note { margin: 6px 0 0; font-size: 14px; }
+#poly { display: block; width: 100%; height: 240px; }
+.rows { display: grid; gap: 3px; margin: 0; }
+.rows div { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; transition: opacity .25s; }
+.rows dt { font-family: var(--math); font-size: 17px; }
+.rows dt sub { font-size: .65em; }
+.rows dd { margin: 0; font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums; text-align: right; }
+.rows .dim { opacity: .4; }
+.rows .sum { border-top: 1px solid var(--line); padding-top: 4px; margin-top: 2px; font-weight: 500; }
+.controls { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px 22px; align-items: center; }
+.btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn { font: inherit; font-size: 14px; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); min-width: 84px; }
+.btn[aria-pressed="true"] { border-color: var(--pin); color: var(--pin); font-weight: 500; }
+.sliders { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 20px; }
+.sliders label { display: grid; gap: 1px; font-size: 13.5px; min-width: 0; }
+.sliders .top { display: flex; justify-content: space-between; gap: 8px; }
+.sliders output { font-family: var(--mono); font-size: 13px; }
+input[type=range] { width: 100%; accent-color: var(--fg); margin: 2px 0; }
+.eqs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.eqs button { font-family: var(--math); font-size: 16.5px; line-height: 1.3; text-align: left; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--fg); cursor: pointer; min-width: 0; }
+.eqs button sub { font-size: .65em; }
+.eqs button[aria-pressed="true"] { border-color: var(--pin); box-shadow: inset 0 0 0 1px var(--pin); }
+.grp { border-bottom: 2.5px solid var(--pin); color: var(--pin); }
+.eq2 { font-family: var(--math); font-size: 18px; color: var(--pin); }
+.eq2 sub { font-size: .65em; }
+.exps { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.exps .btn { font-size: 13px; padding: 4px 9px; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--rot); outline-offset: 2px; }
+@media (max-width: 900px) {
+  .bench { grid-template-columns: minmax(0, 1fr); }
+  #scene { aspect-ratio: 1 / 1; max-height: none; }
+  .controls, .sliders { grid-template-columns: minmax(0, 1fr); }
+  .eqs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .eqs button { font-size: 14.5px; padding: 6px 8px; }
+  .tabs b { font-size: 14px; } .tabs button { padding: 7px 8px; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>5.7 상대속도: 회전 평판 위의 슬롯</h1>
+    <div class="formula"><b>v</b><sub>A</sub> = <b>v</b><sub>B</sub> + <b>ω</b> × <b>r</b> + <b>v</b><sub>rel</sub></div>
+  </header>
+
+  <div class="tabs" role="group" aria-label="관측 좌표계 선택">
+    <button id="v0" aria-pressed="true"><b>지면에서 보기</b><span>고정 좌표계 X-Y</span></button>
+    <button id="v1" aria-pressed="false"><b>B와 함께 이동</b><span>B에 부착된 비회전 좌표계</span></button>
+    <button id="v2" aria-pressed="false"><b>평판 위에서 보기</b><span>평판에 부착된 회전 좌표계 x-y</span></button>
+  </div>
+
+  <div class="eqs" role="group" aria-label="수식 비교">
+    <button id="e0" aria-pressed="false">① <b>v</b><sub>A</sub> = <b>v</b><sub>B</sub> + <b>ω</b>×<b>r</b> + <b>v</b><sub>rel</sub></button>
+    <button id="e1" aria-pressed="false">② <b>v</b><sub>A</sub> = <b>v</b><sub>B</sub> + <b>v</b><sub>P/B</sub> + <b>v</b><sub>A/P</sub></button>
+    <button id="e2" aria-pressed="false">③ <b>v</b><sub>A</sub> = <b>v</b><sub>P</sub> + <b>v</b><sub>A/P</sub></button>
+    <button id="e3" aria-pressed="false">④ <b>v</b><sub>A</sub> = <b>v</b><sub>B</sub> + <b>v</b><sub>A/B</sub></button>
+  </div>
+
+  <div class="bench">
+    <div class="stage"><canvas id="scene" role="img" aria-label="점 B를 중심으로 회전하는 평판과 슬롯을 따라 움직이는 질점 A, 그리고 A에 작용하는 속도 벡터 애니메이션"></canvas></div>
+    <div class="side">
+      <div class="card">
+        <h2 id="eqTitle">이 관측자가 재는 A의 속도</h2>
+        <div class="eq" id="eq"></div>
+        <div class="eq2" id="eq2" hidden></div>
+        <p class="note" id="note"></p>
+        <div class="exps"><span>항 끄기</span><button class="btn" id="x-sd" aria-pressed="false">ṡ = 0</button><button class="btn" id="x-w" aria-pressed="false">ω = 0</button><button class="btn" id="x-vb" aria-pressed="false">v_B = 0</button></div>
+        <p class="note" id="expNote" hidden></p>
+      </div>
+      <div class="card">
+        <h2>속도 벡터 합성 (머리-꼬리 연결)</h2>
+        <canvas id="poly" role="img" aria-label="속도 벡터를 머리와 꼬리로 연결한 합성 그림"></canvas>
+      </div>
+      <div class="card">
+        <h2>현재 값</h2>
+        <dl class="rows" id="rows">
+          <div id="rB"><dt class="base"><b>v</b><sub>B</sub></dt><dd id="oB"></dd></div>
+          <div id="rR"><dt class="rot"><b>ω</b> × <b>r</b> = <b>v</b><sub>P/B</sub></dt><dd id="oR"></dd></div>
+          <div id="rS"><dt class="rel"><b>v</b><sub>rel</sub> = <b>v</b><sub>A/P</sub></dt><dd id="oS"></dd></div>
+          <div id="rG" hidden><dt class="grp" id="gName"></dt><dd id="oG"></dd></div>
+          <div class="sum"><dt class="abs" id="sumName"></dt><dd id="oA"></dd></div>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="card controls">
+    <div class="btns">
+      <button class="btn primary" id="play">일시정지</button>
+      <button class="btn" id="step">한 단계</button>
+      <button class="btn" id="slow" aria-pressed="false">슬로모션</button>
+      <button class="btn" id="pin" aria-pressed="false">이 순간의 P 고정</button>
+      <button class="btn" id="clear">궤적 지우기</button>
+    </div>
+    <div class="sliders">
+      <label for="w"><span class="top"><span>평판 각속도 θ̇ = ω</span><output id="wO"></output></span><input id="w" type="range" min="-1.2" max="1.2" step="0.05" value="0.5"></label>
+      <label for="sd"><span class="top"><span>슬롯 속력 ṡ</span><output id="sdO"></output></span><input id="sd" type="range" min="0" max="200" step="5" value="80"></label>
+      <label for="vb"><span class="top"><span>B의 속력 v<sub>B</sub></span><output id="vbO"></output></span><input id="vb" type="range" min="0" max="150" step="5" value="60"></label>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const scene = $('scene'), ctx = scene.getContext('2d');
+const poly = $('poly'), pc = poly.getContext('2d');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Geometry in plate coordinates (mm), origin at corner B, taken from the textbook figure.
+const PLATE = 430;
+const P0 = {x:142,y:63}, P1 = {x:230,y:205}, P2 = {x:246,y:387};
+const bez = t => ({x:(1-t)*(1-t)*P0.x+2*(1-t)*t*P1.x+t*t*P2.x, y:(1-t)*(1-t)*P0.y+2*(1-t)*t*P1.y+t*t*P2.y});
+const N = 400, table = [{t:0,l:0}];
+for (let i=1,l=0,p=bez(0);i<=N;i++){const q=bez(i/N); l+=Math.hypot(q.x-p.x,q.y-p.y); table.push({t:i/N,l}); p=q;}
+const L = table[N].l;
+function onSlot(s){
+  let lo=0,hi=N; while(hi-lo>1){const m=(lo+hi)>>1; if(table[m].l<s) lo=m; else hi=m;}
+  const f=(s-table[lo].l)/((table[hi].l-table[lo].l)||1), t=table[lo].t+f/N;
+  const p=bez(t), dx=2*(1-t)*(P1.x-P0.x)+2*t*(P2.x-P1.x), dy=2*(1-t)*(P1.y-P0.y)+2*t*(P2.y-P1.y), d=Math.hypot(dx,dy)||1;
+  return {x:p.x,y:p.y,tx:dx/d,ty:dy/d};
+}
+const rot = (v,a)=>({x:v.x*Math.cos(a)-v.y*Math.sin(a), y:v.x*Math.sin(a)+v.y*Math.cos(a)});
+const add = (a,b)=>({x:a.x+b.x,y:a.y+b.y});
+const sub = (a,b)=>({x:a.x-b.x,y:a.y-b.y});
+
+const O = {x:-430,y:-170}, E_B = {x:Math.cos(.35),y:Math.sin(.35)}, B_MAX = 160;
+const TH0 = 35*Math.PI/180;
+const st = {theta:TH0, s:0, dirS:1, b:0, dirB:1, omega:.5, sdot:80, vb:60, pin:null, eq:null, playing:!reduce, slow:false, view:0, from:0, u:1, trail:[], acc:0};
+{ let lo=0,best=1e9; for(let i=0;i<=N;i++){const p=bez(i/N),d=Math.hypot(p.x-212,p.y-215); if(d<best){best=d;lo=i;}} st.s=table[lo].l; }
+
+function frame(){
+  const rB={x:E_B.x*st.b,y:E_B.y*st.b}, q=onSlot(st.s), r=rot(q,st.theta), A=add(rB,r);
+  const vB={x:E_B.x*st.dirB*st.vb,y:E_B.y*st.dirB*st.vb};
+  const vR={x:-st.omega*r.y,y:st.omega*r.x};
+  const t=rot({x:q.tx,y:q.ty},st.theta), vS={x:t.x*st.dirS*st.sdot,y:t.y*st.dirS*st.sdot};
+  return {rB,q,r,A,vB,vR,vS};
+}
+function advance(dt){
+  st.theta+=st.omega*dt;
+  st.s+=st.dirS*st.sdot*dt;
+  if(st.s>L-8){st.s=L-8;st.dirS=-1;} if(st.s<8){st.s=8;st.dirS=1;}
+  st.b+=st.dirB*st.vb*dt;
+  if(st.b>B_MAX){st.b=B_MAX;st.dirB=-1;} if(st.b<-B_MAX){st.b=-B_MAX;st.dirB=1;}
+  st.acc+=dt;
+  if(st.acc>.05){
+    st.acc=0;
+    const f=frame();
+    st.trail.push({th:st.theta,rB:f.rB,r:f.r,p:st.pin?rot(st.pin,st.theta):null});
+    if(st.trail.length>420) st.trail.shift();
+  }
+}
+
+// View transforms: screen = S + k * R(phi) * (world - a), y flipped.
+let W=800,H=640,C={};
+function viewParams(v,f){
+  const m=Math.min(W,H);
+  if(v===0) return {a:{x:0,y:-10},phi:0,k:Math.min(W/1640,H/1440)};
+  if(v===1) return {a:f.rB,phi:0,k:m/1400};
+  return {a:add(f.rB,rot({x:215,y:215},st.theta)),phi:TH0-st.theta,k:Math.min(W/960,H/860)};
+}
+const ease=u=>u*u*(3-2*u);
+function current(f){
+  const b=viewParams(st.view,f); if(st.u>=1) return b;
+  const a=viewParams(st.from,f), e=ease(st.u);
+  let dp=(b.phi-a.phi)%(2*Math.PI); if(dp>Math.PI)dp-=2*Math.PI; if(dp<-Math.PI)dp+=2*Math.PI;
+  return {a:{x:a.a.x+(b.a.x-a.a.x)*e,y:a.a.y+(b.a.y-a.a.y)*e},phi:a.phi+dp*e,k:a.k+(b.k-a.k)*e};
+}
+function mk(p){
+  const c=Math.cos(p.phi),s=Math.sin(p.phi);
+  return {T:w=>{const x=w.x-p.a.x,y=w.y-p.a.y;return {x:W/2+p.k*(x*c-y*s),y:H/2-p.k*(x*s+y*c)};},
+          V:(v,g)=>({x:g*(v.x*c-v.y*s),y:-g*(v.x*s+v.y*c)}),phi:p.phi,k:p.k};
+}
+function fit(){
+  const d=Math.min(devicePixelRatio||1,2.5);
+  W=scene.clientWidth; H=scene.clientHeight; scene.width=W*d; scene.height=H*d; ctx.setTransform(d,0,0,d,0,0);
+  const w=poly.clientWidth,h=poly.clientHeight; poly.width=w*d; poly.height=h*d; pc.setTransform(d,0,0,d,0,0);
+}
+new ResizeObserver(()=>{fit();draw();}).observe(scene);
+function colors(){const s=getComputedStyle(document.documentElement);['bg','panel','fg','muted','line','plate','plate-edge','slot','dot','rel','rot','base','abs','pin','math','sans'].forEach(n=>C[n]=s.getPropertyValue('--'+n).trim());}
+colors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',colors);
+new MutationObserver(colors).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+function arrow(c,x,y,dx,dy,col,w){
+  const l=Math.hypot(dx,dy); if(l<2.5) return;
+  const ux=dx/l,uy=dy/l,h=Math.min(5+w*2.6,l*.6),ex=x+dx,ey=y+dy;
+  c.strokeStyle=col;c.fillStyle=col;c.lineWidth=w;c.lineCap='round';
+  c.beginPath();c.moveTo(x,y);c.lineTo(ex-ux*h*.7,ey-uy*h*.7);c.stroke();
+  c.beginPath();c.moveTo(ex,ey);c.lineTo(ex-ux*h-uy*h*.48,ey-uy*h+ux*h*.48);c.lineTo(ex-ux*h+uy*h*.48,ey-uy*h-ux*h*.48);c.closePath();c.fill();
+}
+function label(c,x,y,main,sb,col,size=17,bold=true){
+  c.font=`${bold?'700':'500'} ${size}px ${C.math}`;
+  const w=c.measureText(main).width; c.font=`500 ${size*.68}px ${C.math}`;
+  const ws=sb?c.measureText(sb).width:0, x0=x-(w+ws)/2;
+  c.textAlign='left';c.textBaseline='middle';c.lineJoin='round';
+  c.font=`${bold?'700':'500'} ${size}px ${C.math}`;
+  c.strokeStyle=C.panel;c.lineWidth=4;c.strokeText(main,x0,y);c.fillStyle=col;c.fillText(main,x0,y);
+  if(sb){c.font=`500 ${size*.68}px ${C.math}`;c.strokeText(sb,x0+w+1,y+size*.3);c.fillText(sb,x0+w+1,y+size*.3);}
+}
+function dash(c,a,b,col,w=1.2,d=[6,5]){c.save();c.setLineDash(d);c.strokeStyle=col;c.lineWidth=w;c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();c.restore();}
+function tip(c,o,v,txt,sb,col){const l=Math.hypot(v.x,v.y)||1;label(c,o.x+v.x+v.x/l*20,o.y+v.y+v.y/l*14,txt,sb,col);}
+
+function draw(){
+  const f=frame(), M=mk(current(f)), {T,V,k}=M, vs=Math.min(W,H)/900;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=C.panel;ctx.fillRect(0,0,W,H);
+
+  // Ground dots: they stay put only when the observer is on the ground.
+  const p=current(f),D=Math.hypot(W,H)/2/p.k+100,G=100;
+  ctx.fillStyle=C.dot;
+  for(let i=Math.floor((p.a.x-D)/G);i<=(p.a.x+D)/G;i++)for(let j=Math.floor((p.a.y-D)/G);j<=(p.a.y+D)/G;j++){
+    const s=T({x:i*G,y:j*G}); if(s.x<-3||s.y<-3||s.x>W+3||s.y>H+3)continue;
+    ctx.beginPath();ctx.arc(s.x,s.y,1.4,0,7);ctx.fill();
+  }
+  // Fixed X-Y axes
+  if(st.view===0||st.u<1){
+    ctx.save();ctx.globalAlpha=st.view===0?Math.min(1,ease(st.u)):1-ease(st.u);
+    const o=T(O),X=T({x:O.x+1000,y:O.y}),Y=T({x:O.x,y:O.y+560});
+    dash(ctx,o,X,C.muted);dash(ctx,o,Y,C.muted);
+    label(ctx,X.x+12,X.y,'X','',C.muted,16,false);label(ctx,Y.x,Y.y-11,'Y','',C.muted,16,false);label(ctx,o.x-12,o.y+13,'O','',C.muted,16,false);
+    const b=T(f.rB);arrow(ctx,o.x,o.y,b.x-o.x,b.y-o.y,C.fg,1.8);
+    label(ctx,(o.x+b.x)/2+4,(o.y+b.y)/2+15,'r','B',C.fg,16);
+    ctx.restore();
+  }
+  // Non-rotating axes through B
+  if(st.view===1){const b=T(f.rB);dash(ctx,{x:b.x-W,y:b.y},{x:b.x+W,y:b.y},C.line,1.1);dash(ctx,{x:b.x,y:b.y-H},{x:b.x,y:b.y+H},C.line,1.1);}
+
+  const pl=w=>add(f.rB,rot(w,st.theta)), Tp=w=>T(pl(w));
+  // Plate
+  ctx.beginPath();[[0,0],[PLATE,0],[PLATE,PLATE],[0,PLATE]].forEach(([x,y],i)=>{const s=Tp({x,y});i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y);});ctx.closePath();
+  ctx.fillStyle=C.plate;ctx.globalAlpha=.78;ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=C['plate-edge'];ctx.lineWidth=1.3;ctx.stroke();
+  // Plate x-y axes
+  const b=T(f.rB),xe=Tp({x:560,y:0}),ye=Tp({x:0,y:560});
+  dash(ctx,b,xe,C['plate-edge'],1,[8,6]);dash(ctx,b,ye,C['plate-edge'],1,[8,6]);
+  label(ctx,xe.x,xe.y,'x','',C['plate-edge'],16,false);label(ctx,ye.x,ye.y,'y','',C['plate-edge'],16,false);
+  // Slot
+  const path=()=>{ctx.beginPath();for(let i=0;i<=50;i++){const s=Tp(bez(i/50));i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y);}};
+  ctx.lineCap='round';ctx.lineJoin='round';
+  path();ctx.strokeStyle=C['plate-edge'];ctx.lineWidth=Math.max(7,17*k)+2;ctx.stroke();
+  path();ctx.strokeStyle=C.slot;ctx.lineWidth=Math.max(7,17*k);ctx.stroke();
+  // Travelled arc s
+  ctx.beginPath();for(let i=0;i<=40;i++){const q=onSlot(st.s*i/40),s=Tp(q);i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y);}ctx.strokeStyle=C.rel;ctx.globalAlpha=.45;ctx.lineWidth=2.5;ctx.stroke();ctx.globalAlpha=1;
+
+  // Trails, redrawn for the current observer.
+  const now={th:st.theta,rB:f.rB};
+  const place=(smp,rel)=>{
+    if(st.view===0) return add(smp.rB,rel);
+    if(st.view===1) return add(now.rB,rel);
+    return add(now.rB,rot(rel,now.th-smp.th));
+  };
+  function trail(key,col){
+    ctx.strokeStyle=col;ctx.lineWidth=1.8;ctx.setLineDash([]);
+    const n=st.trail.length;let last=null;
+    for(let i=0;i<n;i++){const smp=st.trail[i],rel=smp[key];if(!rel){last=null;continue;}
+      const s=T(place(smp,rel));
+      if(last){ctx.globalAlpha=.08+.62*i/n;ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(s.x,s.y);ctx.stroke();}
+      last=s;}
+    ctx.globalAlpha=1;
+  }
+  trail('r',C.abs);
+  if(st.pin) trail('p',C.pin);
+
+  // ω arc and B
+  if(st.view!==2&&st.omega!==0){
+    const R=44,a0=-M.phi-st.theta+.1;ctx.strokeStyle=C.rot;ctx.lineWidth=2;
+    const sg=st.omega>0?-1:1,start=-1.9,end=start+sg*1.35;
+    ctx.beginPath();ctx.arc(b.x,b.y,R,start,end,sg<0);ctx.stroke();
+    const ex=b.x+R*Math.cos(end),ey=b.y+R*Math.sin(end),tx=-Math.sin(end)*sg,ty=Math.cos(end)*sg;
+    arrow(ctx,ex-tx*8,ey-ty*8,tx*9,ty*9,C.rot,2);
+    label(ctx,b.x+R*1.32*Math.cos(start+sg*1.35),b.y+R*1.32*Math.sin(start+sg*1.35),'ω','',C.rot);
+  }
+  // r vector
+  const a=T(f.A);
+  arrow(ctx,b.x,b.y,a.x-b.x,a.y-b.y,C.fg,2.2);
+  label(ctx,(a.x+b.x)/2+13,(a.y+b.y)/2+4,'r','',C.fg);
+  ctx.fillStyle=C.fg;ctx.beginPath();ctx.arc(b.x,b.y,4.5,0,7);ctx.fill();
+  label(ctx,b.x+12,b.y+15,'B','',C.fg,16,false);
+
+  // Velocity arrows from A
+  const dR=V(f.vR,vs),dS=V(f.vS,vs),dB=V(f.vB,vs),O0={x:a.x,y:a.y};
+  if(st.eq!==null){
+    const rn=st.eq?['v','P/B']:['ω×r',''], sn=st.eq?['v','A/P']:['v','rel'];
+    const dT={x:dR.x+dS.x+dB.x,y:dR.y+dS.y+dB.y};
+    if(st.eq<2){
+      arrow(ctx,a.x,a.y,dB.x,dB.y,C.base,2.6);tip(ctx,O0,dB,'v','B',C.base);
+      arrow(ctx,a.x,a.y,dR.x,dR.y,C.rot,2.6);tip(ctx,O0,dR,rn[0],rn[1],C.rot);
+      arrow(ctx,a.x,a.y,dS.x,dS.y,C.rel,2.6);tip(ctx,O0,dS,sn[0],sn[1],C.rel);
+      arrow(ctx,a.x,a.y,dT.x,dT.y,C.abs,3.6);tip(ctx,O0,dT,'v','A',C.abs);
+    } else if(st.eq===2){
+      const dP={x:dB.x+dR.x,y:dB.y+dR.y};
+      ctx.globalAlpha=.35;arrow(ctx,a.x,a.y,dB.x,dB.y,C.base,1.8);arrow(ctx,a.x,a.y,dR.x,dR.y,C.rot,1.8);ctx.globalAlpha=1;
+      dash(ctx,{x:a.x+dP.x,y:a.y+dP.y},{x:a.x+dT.x,y:a.y+dT.y},C.muted);
+      dash(ctx,{x:a.x+dS.x,y:a.y+dS.y},{x:a.x+dT.x,y:a.y+dT.y},C.muted);
+      arrow(ctx,a.x,a.y,dP.x,dP.y,C.pin,3.4);tip(ctx,O0,dP,'v','P',C.pin);
+      arrow(ctx,a.x,a.y,dS.x,dS.y,C.rel,2.6);tip(ctx,O0,dS,'v','A/P',C.rel);
+      arrow(ctx,a.x,a.y,dT.x,dT.y,C.abs,3.6);tip(ctx,O0,dT,'v','A',C.abs);
+    } else {
+      const dG={x:dR.x+dS.x,y:dR.y+dS.y};
+      dash(ctx,{x:a.x+dR.x,y:a.y+dR.y},{x:a.x+dG.x,y:a.y+dG.y},C.muted);
+      dash(ctx,{x:a.x+dS.x,y:a.y+dS.y},{x:a.x+dG.x,y:a.y+dG.y},C.muted);
+      arrow(ctx,a.x,a.y,dR.x,dR.y,C.rot,2.2);tip(ctx,O0,dR,'v','P/B',C.rot);
+      arrow(ctx,a.x,a.y,dS.x,dS.y,C.rel,2.2);tip(ctx,O0,dS,'v','A/P',C.rel);
+      arrow(ctx,a.x,a.y,dG.x,dG.y,C.pin,3.6);tip(ctx,O0,dG,'v','A/B',C.pin);
+    }
+  } else if(st.view===0){
+    const dT={x:dR.x+dS.x+dB.x,y:dR.y+dS.y+dB.y};
+    arrow(ctx,a.x,a.y,dB.x,dB.y,C.base,2.6);tip(ctx,O0,dB,'v','B',C.base);
+    arrow(ctx,a.x,a.y,dR.x,dR.y,C.rot,2.6);tip(ctx,O0,dR,'ω×r','',C.rot);
+    arrow(ctx,a.x,a.y,dS.x,dS.y,C.rel,2.6);tip(ctx,O0,dS,'v','rel',C.rel);
+    arrow(ctx,a.x,a.y,dT.x,dT.y,C.abs,3.6);tip(ctx,O0,dT,'v','A',C.abs);
+  } else if(st.view===1){
+    const dT={x:dR.x+dS.x,y:dR.y+dS.y};
+    dash(ctx,{x:a.x+dR.x,y:a.y+dR.y},{x:a.x+dT.x,y:a.y+dT.y},C.muted);
+    dash(ctx,{x:a.x+dS.x,y:a.y+dS.y},{x:a.x+dT.x,y:a.y+dT.y},C.muted);
+    arrow(ctx,a.x,a.y,dR.x,dR.y,C.rot,2.6);tip(ctx,O0,dR,'ω×r','',C.rot);
+    arrow(ctx,a.x,a.y,dS.x,dS.y,C.rel,2.6);tip(ctx,O0,dS,'v','rel',C.rel);
+    arrow(ctx,a.x,a.y,dT.x,dT.y,C.abs,3.6);tip(ctx,O0,dT,'v','A/B',C.abs);
+  } else {
+    arrow(ctx,a.x,a.y,dS.x,dS.y,C.rel,3.2);tip(ctx,O0,dS,'v','rel',C.rel);
+  }
+  // Right-angle mark between r and ω×r
+  if(st.view!==2&&Math.hypot(dR.x,dR.y)>16){
+    const u1={x:(b.x-a.x),y:(b.y-a.y)},n1=Math.hypot(u1.x,u1.y),n2=Math.hypot(dR.x,dR.y),m=9;
+    const p1={x:a.x+u1.x/n1*m,y:a.y+u1.y/n1*m},p2={x:a.x+dR.x/n2*m,y:a.y+dR.y/n2*m},p3={x:p1.x+dR.x/n2*m,y:p1.y+dR.y/n2*m};
+    ctx.strokeStyle=C.muted;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p3.x,p3.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
+  }
+  // Point P and particle A
+  if(st.pin){
+    const s=Tp(st.pin);ctx.fillStyle=C.pin;ctx.beginPath();ctx.arc(s.x,s.y,6,0,7);ctx.fill();
+    label(ctx,s.x-14,s.y-13,'P','',C.pin,16);
+    if(st.view===2) label(ctx,s.x,s.y+22,'v','P/B = 0',C.pin,15);
+  } else {
+    ctx.strokeStyle=C.pin;ctx.lineWidth=2;ctx.beginPath();ctx.arc(a.x,a.y,11,0,7);ctx.stroke();
+    label(ctx,a.x-22,a.y+15,'P','',C.pin,16);
+  }
+  ctx.fillStyle=C.fg;ctx.strokeStyle=C.panel;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(a.x,a.y,6,0,7);ctx.fill();ctx.stroke();
+  label(ctx,a.x+15,a.y+14,'A','',C.fg,16,false);
+
+  drawPoly(f,M);
+  readouts(f);
+}
+
+function drawPolyEq(f,M,w,h){
+  const u1=M.V(f.vB,1),u2=add(u1,M.V(f.vR,1)),u3=add(u2,M.V(f.vS,1)),ux=[0,u1.x,u2.x,u3.x],uy=[0,u1.y,u2.y,u3.y];
+  const target=Math.min((w-70)/Math.max(Math.max(...ux)-Math.min(...ux),40),(h-60)/Math.max(Math.max(...uy)-Math.min(...uy),40),1.2);
+  st.pg=st.playing&&st.pg?st.pg+(target-st.pg)*.06:target;
+  const g=Math.min(st.pg,target);
+  const dB=M.V(f.vB,g),dR=M.V(f.vR,g),dS=M.V(f.vS,g);
+  const pts=[{x:0,y:0},dB,add(dB,dR),add(add(dB,dR),dS)];
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),ox=w/2-(Math.min(...xs)+Math.max(...xs))/2,oy=h/2-(Math.min(...ys)+Math.max(...ys))/2;
+  const n=pts.map(p=>({x:p.x+ox,y:p.y+oy}));
+  const lab=(a,b,sg,txt,sb,col)=>{const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy);if(l<16)return;label(pc,a.x+dx/2-sg*dy/l*17,a.y+dy/2+sg*dx/l*17,txt,sb,col,15);};
+  const seg=(a,b,col,on)=>{pc.globalAlpha=on?1:.4;arrow(pc,a.x,a.y,b.x-a.x,b.y-a.y,col,on?2.6:1.8);pc.globalAlpha=1;};
+  const e=st.eq;
+  seg(n[0],n[1],C.base,e!==2);
+  seg(n[1],n[2],C.rot,e<2);
+  seg(n[2],n[3],C.rel,e!==3);
+  if(e!==2) lab(n[0],n[1],1,'v','B',C.base);
+  if(e<2) lab(n[1],n[2],1,e?'v':'ω×r',e?'P/B':'',C.rot);
+  if(e!==3) lab(n[2],n[3],1,'v',e?'A/P':'rel',C.rel);
+  if(e===2){arrow(pc,n[0].x,n[0].y,n[2].x-n[0].x,n[2].y-n[0].y,C.pin,3.4);lab(n[0],n[2],1,'v','P',C.pin);}
+  if(e===3){arrow(pc,n[1].x,n[1].y,n[3].x-n[1].x,n[3].y-n[1].y,C.pin,3.4);lab(n[1],n[3],1,'v','A/B',C.pin);}
+  arrow(pc,n[0].x,n[0].y,n[3].x-n[0].x,n[3].y-n[0].y,C.abs,3.4);lab(n[0],n[3],-1,'v','A',C.abs);
+  pc.fillStyle=C.fg;n.forEach(p=>{pc.beginPath();pc.arc(p.x,p.y,3,0,7);pc.fill();});
+  ['','B','P','A'].forEach((t,i)=>{if(t)label(pc,n[i].x+11,n[i].y-11,t,'',C.fg,14,false);});
+}
+function drawPoly(f,M){
+  const w=poly.clientWidth,h=poly.clientHeight;
+  pc.clearRect(0,0,w,h);
+  if(st.eq!==null){drawPolyEq(f,M,w,h);return;}
+  const reach=Math.max(st.vb+Math.abs(st.omega)*400+st.sdot,60),g=Math.min(w,h)*.8/reach;
+  const terms={b:{v:f.vB,c:C.base,n:'v',s:'B'},r:{v:f.vR,c:C.rot,n:'ω×r',s:''},s:{v:f.vS,c:C.rel,n:'v',s:'rel'}};
+  const order=[['b','r','s'],['r','s','b'],['s','r','b']][st.view], live=[3,2,1][st.view];
+  let bx=0,by=0,x1=0,x2=0,y1=0,y2=0;
+  order.forEach(key=>{const d=M.V(terms[key].v,g);bx+=d.x;by+=d.y;x1=Math.min(x1,bx);x2=Math.max(x2,bx);y1=Math.min(y1,by);y2=Math.max(y2,by);});
+  let x=w/2-(x1+x2)/2,y=h/2-(y1+y2)/2; const x0=x,y0=y;
+  let rx=x,ry=y;
+  order.forEach((key,i)=>{
+    const t=terms[key],d=M.V(t.v,g),on=i<live;
+    pc.globalAlpha=on?1:.22;
+    arrow(pc,x,y,d.x,d.y,t.c,on?2.6:1.6);
+    if(on&&Math.hypot(d.x,d.y)>18){const n=Math.hypot(d.x,d.y);label(pc,x+d.x/2-d.y/n*16,y+d.y/2+d.x/n*16,t.n,t.s,t.c,15);}
+    pc.globalAlpha=1;
+    x+=d.x;y+=d.y;
+    if(on){rx=x;ry=y;}
+  });
+  if(live>1){arrow(pc,x0,y0,rx-x0,ry-y0,C.abs,3.4);
+    const dx=rx-x0,dy=ry-y0,n=Math.hypot(dx,dy)||1;
+    if(n>20) label(pc,x0+dx/2+dy/n*16,y0+dy/2-dx/n*16,'v',st.view?'A/B':'A',C.abs,15);}
+  pc.fillStyle=C.fg;pc.beginPath();pc.arc(x0,y0,3,0,7);pc.fill();
+}
+
+const fmt=v=>Math.hypot(v.x,v.y).toFixed(0).padStart(3,' ')+' mm/s';
+let lastR=0;
+function readouts(f){
+  const t=performance.now(); if(t-lastR<90) return; lastR=t;
+  const rmag=Math.hypot(f.r.x,f.r.y);
+  $('oB').textContent=fmt(f.vB);
+  $('oR').textContent=`${rmag.toFixed(0)}×${Math.abs(st.omega).toFixed(2)} = ${(rmag*Math.abs(st.omega)).toFixed(0)} mm/s`;
+  $('oS').textContent=fmt(f.vS);
+  if(st.eq===2) $('oG').textContent=fmt(add(f.vB,f.vR));
+  if(st.eq===3) $('oG').textContent=fmt(add(f.vR,f.vS));
+  const tot=st.eq!==null?add(add(f.vB,f.vR),f.vS):[add(add(f.vB,f.vR),f.vS),add(f.vR,f.vS),f.vS][st.view];
+  $('oA').textContent=fmt(tot);
+}
+
+const VIEWS=[
+ {title:'지면의 관측자가 재는 A의 속도',terms:[1,1,1],lhs:'<b>v</b><sub>A</sub>',sum:'|<b>v</b><sub>A</sub>|',
+  note:'세 항이 모두 보입니다. 지면의 점들은 멈춰 있고, 평판은 이동하면서 회전합니다.'},
+ {title:'B와 함께 이동하는 관측자가 재는 A의 속도',terms:[0,1,1],lhs:'<b>v</b><sub>A/B</sub>',sum:'|<b>v</b><sub>A/B</sub>|',
+  note:'B가 멈춰 보이므로 <b>v</b><sub>B</sub>가 사라집니다. 평판의 회전은 그대로 보이고, 평판의 점 P는 B 둘레로 원을 그립니다. 이때 P의 속도가 <b>v</b><sub>P/B</sub> = <b>ω</b> × <b>r</b>입니다.'},
+ {title:'평판 위의 관측자가 재는 A의 속도',terms:[0,0,1],lhs:'<b>v</b><sub>rel</sub>',sum:'|<b>v</b><sub>rel</sub>| = ṡ',
+  note:'평판이 멈춰 보이고 지면이 대신 돕니다. x-y에서 P는 움직이지 않으므로 <b>v</b><sub>P/B</sub> = 0이고, A는 슬롯 접선 방향으로 ṡ로만 움직입니다.'}
+];
+const A_='<span class="abs"><b>v</b><sub>A</sub></span>', B_='<span class="base"><b>v</b><sub>B</sub></span>', PB='<span class="rot"><b>v</b><sub>P/B</sub></span>', AP='<span class="rel"><b>v</b><sub>A/P</sub></span>';
+const EQS=[
+ {view:0,title:'식 ①: 계산하는 형태',eq:`${A_} = ${B_} + <span class="rot"><b>ω</b> × <b>r</b></span> + <span class="rel"><b>v</b><sub>rel</sub></span>`,note:'문제를 풀 때 쓰는 형태입니다. <b>ω</b>×<b>r</b>의 크기는 rθ̇, <b>v</b><sub>rel</sub>의 크기는 ṡ입니다.'},
+ {view:0,title:'식 ②: 이름만 바꾼 형태',eq:`${A_} = ${B_} + ${PB} + ${AP}`,note:'화살표는 ①과 똑같고 이름만 바뀝니다. <b>v</b><sub>P/B</sub>는 비회전 좌표계에서 잰 B에 대한 P의 속도, <b>v</b><sub>A/P</sub>는 P에 대한 A의 속도입니다.'},
+ {view:0,title:'식 ③: 앞의 두 화살표를 묶음 (P를 경유)',eq:`${A_} = <span class="grp"><b>v</b><sub>P</sub></span> + ${AP}`,eq2:'<b>v</b><sub>P</sub> = <b>v</b><sub>B</sub> + <b>v</b><sub>P/B</sub>',gn:'<b>v</b><sub>P</sub>',note:'<b>v</b><sub>P</sub>는 평판의 점 P의 절대속도이고, 평판의 병진과 회전을 모두 담습니다. 여기에 슬롯을 따른 상대운동 <b>v</b><sub>A/P</sub>를 더합니다.'},
+ {view:1,title:'식 ④: 뒤의 두 화살표를 묶음 (B를 경유)',eq:`${A_} = ${B_} + <span class="grp"><b>v</b><sub>A/B</sub></span>`,eq2:'<b>v</b><sub>A/B</sub> = <b>v</b><sub>P/B</sub> + <b>v</b><sub>A/P</sub>',gn:'<b>v</b><sub>A/B</sub>',note:'화면은 B와 함께 이동하는 시점입니다. 여기서 보이는 A의 속도가 <b>v</b><sub>A/B</sub>이고, 지면 기준으로는 <b>v</b><sub>B</sub>를 더하면 <b>v</b><sub>A</sub>가 됩니다.'}
+];
+function renderEq(){
+  [0,1,2,3].forEach(n=>$('e'+n).setAttribute('aria-pressed',st.eq===n));
+  $('eq2').hidden=true;$('rG').hidden=true;
+  if(st.eq!==null){
+    const q=EQS[st.eq];
+    $('eqTitle').textContent=q.title;$('eq').innerHTML=q.eq;$('note').innerHTML=q.note;
+    $('sumName').innerHTML='|<b>v</b><sub>A</sub>|';
+    $('rB').className='';$('rR').className='';
+    if(q.eq2){$('eq2').innerHTML=q.eq2;$('eq2').hidden=false;$('gName').innerHTML=q.gn;$('rG').hidden=false;}
+    return;
+  }
+  const v=VIEWS[st.view],c=(on,cl,h)=>`<span class="t ${cl} ${on?'':'off'}">${h}</span>`;
+  $('eqTitle').textContent=v.title;
+  $('eq').innerHTML=`<span class="abs">${v.lhs}</span> = ${c(v.terms[0],'base','<b>v</b><sub>B</sub>')} + ${c(v.terms[1],'rot','<b>ω</b> × <b>r</b>')} + ${c(v.terms[2],'rel','<b>v</b><sub>rel</sub>')}`;
+  $('note').innerHTML=v.note;
+  $('sumName').innerHTML=v.sum;
+  $('rB').className=v.terms[0]?'':'dim';$('rR').className=v.terms[1]?'':'dim';
+}
+function setView(i){
+  if(i===st.view) return;
+  st.from=st.view;st.view=i;st.u=reduce?1:0;
+  [0,1,2].forEach(n=>$('v'+n).setAttribute('aria-pressed',n===i));
+  renderEq();lastR=0;draw();
+}
+[0,1,2].forEach(n=>$('v'+n).onclick=()=>{st.eq=null;setView(n);renderEq();lastR=0;draw();});
+[0,1,2,3].forEach(n=>$('e'+n).onclick=()=>{
+  st.eq=st.eq===n?null:n;
+  if(st.eq!==null){if(st.pin)$('pin').click();setView(EQS[n].view);}
+  renderEq();lastR=0;draw();
+});
+
+$('play').onclick=()=>{st.playing=!st.playing;$('play').textContent=st.playing?'일시정지':'재생';};
+$('play').textContent=st.playing?'일시정지':'재생';
+$('step').onclick=()=>{st.playing=false;$('play').textContent='재생';advance(.1);lastR=0;draw();};
+$('slow').onclick=()=>{st.slow=!st.slow;$('slow').setAttribute('aria-pressed',st.slow);};
+$('pin').onclick=()=>{
+  if(st.pin){st.pin=null;$('pin').textContent='이 순간의 P 고정';$('pin').setAttribute('aria-pressed','false');}
+  else{const q=onSlot(st.s);st.pin={x:q.x,y:q.y};$('pin').textContent='P 고정 해제';$('pin').setAttribute('aria-pressed','true');}
+  draw();
+};
+$('clear').onclick=()=>{st.trail=[];draw();};
+const setters={},EXP={sd:'ṡ = 0이면 A가 평판에 붙어 P와 함께 움직입니다. <b>v</b><sub>A/P</sub> = 0이므로 <b>v</b><sub>A</sub> = <b>v</b><sub>P</sub>입니다.',w:'ω = 0이면 평판은 병진만 합니다. <b>v</b><sub>P/B</sub> = 0이므로 <b>v</b><sub>A/B</sub> = <b>v</b><sub>rel</sub>입니다.',vb:'v<sub>B</sub> = 0이면 B가 고정됩니다. <b>v</b><sub>A</sub> = <b>v</b><sub>A/B</sub>이고 <b>v</b><sub>P</sub> = <b>v</b><sub>P/B</sub>입니다.'},saved={};
+function showExp(){const on=Object.keys(EXP).filter(k=>saved[k]!==undefined);$('expNote').hidden=!on.length;$('expNote').innerHTML=on.map(k=>EXP[k]).join('<br>');}
+function bind(id,key,out,f){const e=$(id),u=()=>{st[key]=+e.value;$(out).textContent=f(+e.value);lastR=0;};setters[id]=u;e.oninput=()=>{u();delete saved[id];$('x-'+id).setAttribute('aria-pressed','false');showExp();if(!st.playing)draw();};u();}
+['sd','w','vb'].forEach(id=>$('x-'+id).onclick=()=>{const e=$(id);if(saved[id]===undefined){saved[id]=e.value;e.value=0;}else{e.value=saved[id];delete saved[id];}$('x-'+id).setAttribute('aria-pressed',saved[id]!==undefined);setters[id]();showExp();draw();});
+bind('w','omega','wO',v=>v.toFixed(2)+' rad/s');
+bind('sd','sdot','sdO',v=>v+' mm/s');
+bind('vb','vb','vbO',v=>v+' mm/s');
+
+renderEq();fit();
+let prev=performance.now();
+function loop(now){
+  const dt=Math.min(.05,(now-prev)/1000);prev=now;
+  if(st.u<1) st.u=Math.min(1,st.u+dt/.8);
+  if(st.playing) advance(dt*(st.slow?.25:1));
+  if(st.playing||st.u<1) draw();
+  requestAnimationFrame(loop);
+}
+draw();requestAnimationFrame(loop);
+})();
+</script>
+
+</body></html>
