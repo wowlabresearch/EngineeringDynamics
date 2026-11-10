@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>코리올리 가속도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=STIX+Two+Text:ital,wght@0,500;0,700;1,500;1,700&display=swap">
+<style>
+body { margin: 0; }
+[hidden] { display: none !important; }
+/* Layout: lab bench. Rotating disk on the left, velocity-increment diagram in the middle, explanation and numbers on the right. */
+:root {
+  --bg: #eef2f3; --panel: #ffffff; --fg: #16242b; --muted: #5a6c75; --line: #cfd9dd;
+  --plate: #cfe3f1; --plate-edge: #49626f; --slot: #fbfdfe; --dot: #b7c5cb;
+  --rel: #d0185f; --rot: #1766cc; --cor: #b86a00; --hl: rgba(240, 190, 40, .45); --abs: #05835b; --cen: #6a3fc0;
+  --sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --math: "STIX Two Text", "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10181d; --panel: #18232a; --fg: #e6eef1; --muted: #93a6af; --line: #2f3f48;
+  --plate: #1f3a4b; --plate-edge: #8fb0c0; --slot: #10181d; --dot: #35464f;
+  --rel: #ff6fa5; --rot: #6cb0ff; --cor: #f0ac4a; --hl: rgba(240, 190, 40, .3); --abs: #4bd8a6; --cen: #b99cff; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #10181d; --panel: #18232a; --fg: #e6eef1; --muted: #93a6af; --line: #2f3f48;
+  --plate: #1f3a4b; --plate-edge: #8fb0c0; --slot: #10181d; --dot: #35464f;
+  --rel: #ff6fa5; --rot: #6cb0ff; --cor: #f0ac4a; --hl: rgba(240, 190, 40, .3); --abs: #4bd8a6; --cen: #b99cff; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1400px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 32px; display: grid; gap: 10px; }
+header { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+h1 { font-size: 20px; margin: 0; font-weight: 700; text-wrap: balance; }
+.chip { font-family: var(--math); font-size: 15px; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 1px 10px; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 300px; gap: 10px; align-items: start; }
+.panel { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; min-width: 0; }
+.panel h2 { font-size: 14px; margin: 0; font-weight: 700; line-height: 1.35; }
+.panel .sub { font-size: 12.5px; color: var(--muted); margin: 0; }
+canvas { display: block; width: 100%; height: 440px; touch-action: manipulation; }
+.toggles { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+.tg { font-family: var(--math); font-size: 14.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; min-height: 30px; }
+.tg[aria-pressed="true"] { color: var(--fg); border-color: currentColor; }
+.tg.cor[aria-pressed="true"] { color: var(--cor); } .tg.cen[aria-pressed="true"] { color: var(--cen); }
+.tg.abs[aria-pressed="true"] { color: var(--abs); } .tg.acc[aria-pressed="true"] { color: var(--fg); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; min-width: 0; display: grid; gap: 8px; }
+.card h2 { font-size: 12.5px; color: var(--muted); font-weight: 500; margin: 0; }
+.steps { margin: 0; padding-left: 1.25em; font-size: 13.5px; display: grid; gap: 3px; }
+.m { font-family: var(--math); font-size: 1.12em; }
+.m sub { font-size: .65em; }
+.rel { color: var(--rel); } .rot { color: var(--rot); } .cor { color: var(--cor); } .cen { color: var(--cen); } .abs { color: var(--abs); }
+.big { font-family: var(--math); font-size: 19px; line-height: 1.45; }
+.big sub { font-size: .62em; }
+.rows { display: grid; gap: 1px; margin: 0; }
+.rows div { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.rows dt { font-family: var(--math); font-size: 15.5px; }
+.rows dt sub { font-size: .65em; }
+.rows dd { margin: 0; font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.rows .sum { border-top: 1px solid var(--line); padding-top: 3px; margin-top: 2px; font-weight: 500; }
+.fin { font-size: 12.5px; color: var(--muted); margin: 0; }
+.fin b { color: var(--fg); font-family: var(--mono); font-weight: 500; }
+.controls { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 22px; align-items: center; }
+.btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn { font: inherit; font-size: 14px; padding: 6px 11px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; min-height: 36px; white-space: nowrap; }
+.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); min-width: 76px; }
+.btn[aria-pressed="true"] { border-color: var(--fg); font-weight: 500; }
+.sliders { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 18px; }
+.sliders label { display: grid; gap: 0; font-size: 13px; min-width: 0; }
+.sliders .top { display: flex; justify-content: space-between; gap: 8px; white-space: nowrap; }
+.sliders output { font-family: var(--mono); font-size: 12.5px; }
+input[type=range] { width: 100%; accent-color: var(--fg); margin: 2px 0; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--rot); outline-offset: 2px; }
+@media (max-width: 899px) {
+  .main { grid-template-columns: minmax(0, 1fr); }
+  canvas { height: 360px; }
+  .controls, .sliders { grid-template-columns: minmax(0, 1fr); }
+}
+/* Tablet and larger: one fixed screen. */
+@media (min-width: 700px) and (min-height: 600px) {
+  html, body { height: 100%; overflow: hidden; }
+  .wrap { height: 100%; max-width: none; padding-block: 10px; gap: 8px; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .main { min-height: 0; height: 100%; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 290px; gap: 8px; }
+  .panel { height: 100%; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .panel .cv { position: relative; flex: 1; min-height: 0; }
+  canvas { position: absolute; inset: 0; height: 100%; }
+  .card { height: 100%; overflow-y: auto; align-content: start; padding: 8px 12px; gap: 6px; }
+  .steps { font-size: 13px; }
+  .controls { padding: 6px 12px; gap: 6px 18px; grid-template-columns: auto minmax(0, 1fr); }
+  .btns { flex-wrap: nowrap; gap: 5px; } .btn { font-size: 13px; padding: 5px 9px; }
+  .sliders { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 700px) and (min-height: 600px) and (orientation: portrait) {
+  .main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .card { grid-column: 1 / -1; height: auto; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); column-gap: 20px; }
+  .card > .left { grid-column: 1; } .card > .right { grid-column: 2; grid-row: 1 / span 3; }
+  .controls { grid-template-columns: minmax(0, 1fr); }
+  .btns { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>5.7 코리올리 가속도: 반지름 방향 슬롯</h1>
+    <span class="chip">ω = constant</span>
+    <span class="chip">v<sub>rel</sub> = ẋ = constant</span>
+  </header>
+
+  <div class="main">
+    <section class="panel">
+      <h2>회전하는 원판 (지면에서 본 모습)</h2>
+      <p class="sub" id="stageSub">A의 속도 = 슬롯을 따라 ẋ + 슬롯의 회전에 의한 xω</p>
+      <div class="toggles">
+        <button class="tg abs" id="tgV" aria-pressed="false">v<sub>A</sub> 합성</button>
+        <button class="tg acc" id="tgA" aria-pressed="false">가속도 화살표</button>
+      </div>
+      <div class="cv"><canvas id="stage" role="img" aria-label="일정한 각속도로 회전하는 원판의 반지름 방향 슬롯을 따라 질점 A가 일정한 속력으로 움직이는 애니메이션"></canvas></div>
+    </section>
+
+    <section class="panel">
+      <h2>dθ 동안의 속도 변화 (속도 벡터 그림, 위치 아님)</h2>
+      <p class="sub" id="diagSub"></p>
+      <div class="toggles">
+        <button class="tg cor" id="t1" aria-pressed="true">ẋ dθ</button>
+        <button class="tg cor" id="t2" aria-pressed="true">ω dx</button>
+        <button class="tg cen" id="t3" aria-pressed="true">xω dθ</button>
+      </div>
+      <div class="cv"><canvas id="diag" role="img" aria-label="시각 t와 t+dt의 속도 성분을 겹쳐 그리고 증가분 ẋdθ, ωdx, xωdθ를 표시한 그림"></canvas></div>
+    </section>
+
+    <div class="card">
+      <div class="left">
+        <h2>dt 동안 속도 성분이 바뀌는 세 가지</h2>
+        <ol class="steps">
+          <li><span class="m rel"><b>v</b><sub>rel</sub></span>의 방향이 dθ만큼 돌아감 → <span class="m cor">ẋ dθ</span> (y 방향)</li>
+          <li><span class="m rot">xω</span>의 크기가 커짐: <span class="m">d(xω) = ω dx + x dω = <span class="cor">ω dx</span></span> (ω 일정, y 방향)</li>
+          <li><span class="m rot">xω</span>의 방향이 dθ만큼 돌아감 → <span class="m cen">xω dθ</span> (−x 방향, O를 향함)</li>
+        </ol>
+      </div>
+      <div class="left">
+        <div class="big"><span class="cor">ẋ<i>ω</i> + <i>ω</i>ẋ = 2<i>ω</i>ẋ</span></div>
+        <p class="fin" style="margin:0">①과 ②를 dt로 나눠 더한 값이 코리올리 가속도 2<b style="font-family:var(--math)">ω</b>×<b style="font-family:var(--math)">v</b><sub>rel</sub>의 크기임. ③을 dt로 나누면 구심가속도 xω²임.</p>
+      </div>
+      <div class="right">
+        <dl class="rows">
+          <div><dt class="rel">ẋ</dt><dd id="oVr"></dd></div>
+          <div><dt class="rot">xω</dt><dd id="oXw"></dd></div>
+          <div style="margin-top:4px"><dt class="cor">ẋ dθ / dt = ẋω</dt><dd id="o1"></dd></div>
+          <div><dt class="cor">ω dx / dt = ωẋ</dt><dd id="o2"></dd></div>
+          <div class="sum"><dt class="cor">2ωẋ (코리올리)</dt><dd id="oC"></dd></div>
+          <div><dt class="cen">xω dθ / dt = xω² (구심)</dt><dd id="oN"></dd></div>
+        </dl>
+        <p class="fin" id="fin"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card controls">
+    <div class="btns">
+      <button class="btn primary" id="play">일시정지</button>
+      <button class="btn" id="step">dθ만큼 진행</button>
+      <button class="btn" id="slow" aria-pressed="false">슬로모션</button>
+      <button class="btn" id="reset">처음부터</button>
+    </div>
+    <div class="sliders">
+      <label for="w"><span class="top"><span>각속도 ω</span><output id="wO"></output></span><input id="w" type="range" min="0.1" max="1" step="0.05" value="0.4"></label>
+      <label for="xd"><span class="top"><span>슬롯 속력 ẋ</span><output id="xdO"></output></span><input id="xd" type="range" min="20" max="150" step="5" value="60"></label>
+      <label for="dth"><span class="top"><span>그림의 dθ (확대)</span><output id="dthO"></output></span><input id="dth" type="range" min="4" max="40" step="1" value="20"></label>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const stage = $('stage'), sc = stage.getContext('2d'), diag = $('diag'), dc = diag.getContext('2d');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const R = 250, X0 = 30, XMAX = 225, D2R = Math.PI/180;
+const st = { th: 20*D2R, x: 90, w: .4, xd: 60, dth: 20*D2R, playing: !reduce, slow: false, showV: false, showA: false, inc: [true, true, true], trail: [], acc: 0 };
+const C = {};
+function colors(){ const s=getComputedStyle(document.documentElement); ['bg','panel','fg','muted','line','plate','plate-edge','slot','dot','rel','rot','cor','hl','abs','cen','math','sans'].forEach(n=>C[n]=s.getPropertyValue('--'+n).trim()); }
+colors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{colors();draw();});
+new MutationObserver(()=>{colors();draw();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+const dir = a => ({x:Math.cos(a), y:Math.sin(a)});
+const mul = (v,s) => ({x:v.x*s, y:v.y*s});
+const add = (a,b) => ({x:a.x+b.x, y:a.y+b.y});
+
+function arrow(c,x,y,dx,dy,col,w){
+  const l=Math.hypot(dx,dy); if(l<2.5) return;
+  const ux=dx/l,uy=dy/l,h=Math.min(5+w*2.6,l*.6),ex=x+dx,ey=y+dy;
+  c.strokeStyle=col;c.fillStyle=col;c.lineWidth=w;c.lineCap='round';
+  c.beginPath();c.moveTo(x,y);c.lineTo(ex-ux*h*.7,ey-uy*h*.7);c.stroke();
+  c.beginPath();c.moveTo(ex,ey);c.lineTo(ex-ux*h-uy*h*.48,ey-uy*h+ux*h*.48);c.lineTo(ex-ux*h+uy*h*.48,ey-uy*h-ux*h*.48);c.closePath();c.fill();
+}
+function label(c,x,y,main,sb,col,size=16,bold=false,italic=true){
+  const f1=`${italic?'italic ':''}${bold?'700':'500'} ${size}px ${C.math}`, f2=`500 ${size*.68}px ${C.math}`;
+  c.font=f1;const w=c.measureText(main).width;c.font=f2;const ws=sb?c.measureText(sb).width:0;const x0=x-(w+ws)/2;
+  c.textAlign='left';c.textBaseline='middle';c.lineJoin='round';
+  c.font=f1;c.strokeStyle=C.panel;c.lineWidth=4;c.strokeText(main,x0,y);c.fillStyle=col;c.fillText(main,x0,y);
+  if(sb){c.font=f2;c.strokeText(sb,x0+w+1,y+size*.3);c.fillText(sb,x0+w+1,y+size*.3);}
+}
+function dash(c,a,b,col,w=1.2,d=[7,5]){c.save();c.setLineDash(d);c.strokeStyle=col;c.lineWidth=w;c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();c.restore();}
+function hl(c,a,b,w){c.save();c.strokeStyle=C.hl;c.lineWidth=w;c.lineCap='round';c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();c.restore();}
+
+function size(cv,c){const d=Math.min(devicePixelRatio||1,2.5),W=cv.clientWidth,H=cv.clientHeight;if(cv.width!==Math.round(W*d)||cv.height!==Math.round(H*d)){cv.width=Math.round(W*d);cv.height=Math.round(H*d);}c.setTransform(d,0,0,d,0,0);return {W,H};}
+
+/* ---------- Stage: rotating disk ---------- */
+function drawStage(){
+  const {W,H}=size(stage,sc); if(!W||!H) return;
+  sc.clearRect(0,0,W,H);
+  const k=Math.min(W,H)/(2*(R+105)), O={x:W/2,y:H/2};
+  const T=p=>({x:O.x+k*p.x,y:O.y-k*p.y});
+  const ex=dir(st.th), ey=dir(st.th+Math.PI/2), D=w=>add(mul(ex,w.x),mul(ey,w.y));
+  // fixed axes
+  dash(sc,{x:O.x-k*(R+70),y:O.y},{x:O.x+k*(R+95),y:O.y},C.muted,1.1,[9,6]);
+  dash(sc,{x:O.x,y:O.y+k*(R+70)},{x:O.x,y:O.y-k*(R+95)},C.muted,1.1,[9,6]);
+  label(sc,O.x+k*(R+95)+10,O.y-10,'X','',C.muted,16);label(sc,O.x+12,O.y-k*(R+95)+4,'Y','',C.muted,16);
+  // disk
+  sc.beginPath();sc.arc(O.x,O.y,k*R,0,7);sc.fillStyle=C.plate;sc.fill();sc.strokeStyle=C['plate-edge'];sc.lineWidth=1.4;sc.stroke();
+  // slot
+  const hw=11;sc.beginPath();[[-R,-hw],[R,-hw],[R,hw],[-R,hw]].forEach(([a,b],i)=>{const s=T(D({x:a*Math.sqrt(1-(hw/R)**2),y:b}));i?sc.lineTo(s.x,s.y):sc.moveTo(s.x,s.y);});sc.closePath();
+  sc.fillStyle=C.slot;sc.fill();sc.strokeStyle=C['plate-edge'];sc.lineWidth=1.2;sc.stroke();
+  // rotating axes
+  dash(sc,T(D({x:R,y:0})),T(D({x:R+95,y:0})),C['plate-edge'],1.1);dash(sc,T(D({x:0,y:R*.25})),T(D({x:0,y:R+95})),C['plate-edge'],1.1);
+  dash(sc,T(D({x:0,y:hw})),T(D({x:0,y:R*.25})),C['plate-edge'],1.1);
+  {const p=T(D({x:R+103,y:0}));label(sc,p.x,p.y,'x','',C['plate-edge'],16);const q=T(D({x:0,y:R+103}));label(sc,q.x,q.y,'y','',C['plate-edge'],16);}
+  // ghost at t+dθ when paused
+  if(!st.playing){
+    const dt=st.dth/st.w, x2=st.x+st.xd*dt, e2=dir(st.th+st.dth);
+    dash(sc,T(mul(e2,-R)),T(mul(e2,R+95)),C.muted,1,[3,4]);
+    const p=T(mul(e2,R+108));label(sc,p.x,p.y,"x′",'',C.muted,15);
+    if(x2<R){const g=T(mul(e2,x2));sc.globalAlpha=.45;sc.fillStyle=C.fg;sc.beginPath();sc.arc(g.x,g.y,5,0,7);sc.fill();sc.globalAlpha=1;
+      label(sc,g.x+16,g.y-12,'t+dt','',C.muted,12,false,false);}
+  }
+  // O
+  sc.fillStyle=C.fg;sc.beginPath();sc.arc(O.x,O.y,3.5,0,7);sc.fill();
+  {const p=T(D({x:-22,y:24}));label(sc,p.x,p.y,'O','',C.fg,16);}
+  // ω arrow (fixed in ground)
+  {const r=k*(R+30),a0=-2.15,a1=-1.5;sc.strokeStyle=C.abs;sc.lineWidth=2.2;sc.beginPath();sc.arc(O.x,O.y,r,a0,a1);sc.stroke();
+   const e={x:O.x+r*Math.cos(a0),y:O.y+r*Math.sin(a0)},t={x:Math.sin(a0),y:-Math.cos(a0)};arrow(sc,e.x+t.x*8,e.y+t.y*8,-t.x*9,-t.y*9,C.abs,2.2);
+   label(sc,O.x+r*Math.cos(-1.83),O.y+r*Math.sin(-1.83)-14,'ω = const','',C.abs,15);}
+  // trail
+  sc.strokeStyle=C.abs;sc.lineWidth=1.6;const n=st.trail.length;
+  for(let i=1;i<n;i++){const a=T(st.trail[i-1]),b=T(st.trail[i]);sc.globalAlpha=.1+.5*i/n;sc.beginPath();sc.moveTo(a.x,a.y);sc.lineTo(b.x,b.y);sc.stroke();}
+  sc.globalAlpha=1;
+  // ruler x
+  {const off=-30,a=T(D({x:0,y:off})),b=T(D({x:st.x,y:off}));sc.strokeStyle=C.fg;sc.lineWidth=1;
+   [0,st.x].forEach(v=>{const p=T(D({x:v,y:off-8})),q=T(D({x:v,y:off+8}));sc.beginPath();sc.moveTo(p.x,p.y);sc.lineTo(q.x,q.y);sc.stroke();});
+   if(st.x>20)arrow(sc,a.x,a.y,b.x-a.x,b.y-a.y,C.fg,1.1);
+   const m=T(D({x:st.x/2,y:off-18}));label(sc,m.x,m.y,'x','',C.fg,16);}
+  // A
+  const Aw=D({x:st.x,y:0}),A=T(Aw);
+  sc.save();sc.translate(A.x,A.y);sc.rotate(-st.th);sc.fillStyle=C.cor;sc.globalAlpha=.85;sc.fillRect(-7,-7,14,14);sc.globalAlpha=1;sc.strokeStyle=C.fg;sc.lineWidth=1.2;sc.strokeRect(-7,-7,14,14);sc.restore();
+  // velocities
+  const vs=k*.95, vr=mul(ex,st.xd*vs), vw=mul(ey,st.x*st.w*vs), V=v=>({x:v.x,y:-v.y});
+  const dR=V(vr),dW=V(vw);
+  if(st.showV){const s={x:dR.x+dW.x,y:dR.y+dW.y};dash(sc,{x:A.x+dR.x,y:A.y+dR.y},{x:A.x+s.x,y:A.y+s.y},C.muted,1,[4,4]);dash(sc,{x:A.x+dW.x,y:A.y+dW.y},{x:A.x+s.x,y:A.y+s.y},C.muted,1,[4,4]);
+    arrow(sc,A.x,A.y,s.x,s.y,C.abs,3.2);const l=Math.hypot(s.x,s.y)||1;label(sc,A.x+s.x+s.x/l*18,A.y+s.y+s.y/l*14,'v','A',C.abs,16,true,false);}
+  arrow(sc,A.x,A.y,dR.x,dR.y,C.rel,2.8);
+  {const l=Math.hypot(dR.x,dR.y)||1;label(sc,A.x+dR.x+dR.x/l*30,A.y+dR.y+dR.y/l*14,'ẋ','',C.rel,17);}
+  arrow(sc,A.x,A.y,dW.x,dW.y,C.rot,2.8);
+  {const l=Math.hypot(dW.x,dW.y)||1;label(sc,A.x+dW.x+dW.x/l*20,A.y+dW.y+dW.y/l*14,'xω','',C.rot,17);}
+  // right angle
+  {const u=dir(st.th),v=dir(st.th+Math.PI/2),m=9,p1={x:A.x+u.x*m,y:A.y-u.y*m},p2={x:A.x+v.x*m,y:A.y-v.y*m},p3={x:p1.x+v.x*m,y:p1.y-v.y*m};
+   sc.strokeStyle=C.muted;sc.lineWidth=1;sc.beginPath();sc.moveTo(p1.x,p1.y);sc.lineTo(p3.x,p3.y);sc.lineTo(p2.x,p2.y);sc.stroke();}
+  // accelerations
+  if(st.showA){
+    const lim=Math.min(W,H)*.32, ag=k*2.2;
+    const cor=mul(ey,2*st.w*st.xd*ag), cen=mul(ex,-st.x*st.w*st.w*ag);
+    const cl=v=>{const l=Math.hypot(v.x,v.y);return l>lim?mul(v,lim/l):v;};
+    const dC=V(cl(cor)),dN=V(cl(cen));
+    arrow(sc,A.x,A.y,dC.x,dC.y,C.cor,3.4);{const l=Math.hypot(dC.x,dC.y)||1;label(sc,A.x+dC.x+dC.x/l*10-dN.x*.0-24,A.y+dC.y+dC.y/l*16,'2ωẋ','',C.cor,16,true);}
+    arrow(sc,A.x,A.y,dN.x,dN.y,C.cen,3.4);{const l=Math.hypot(dN.x,dN.y)||1;if(l>8){const u=dir(st.th+Math.PI/2);label(sc,A.x+dN.x*.6+u.x*15,A.y+dN.y*.6-u.y*15,'xω²','',C.cen,16,true);}}
+  }
+  {const u=dir(st.th-Math.PI/2);label(sc,A.x+u.x*24,A.y-u.y*24,'A','',C.fg,16);}
+  // hint
+  sc.font=`500 12.5px ${C.sans}`;sc.textAlign='left';sc.textBaseline='top';sc.fillStyle=C.muted;
+  sc.fillText(st.playing?'일시정지하면 dθ 뒤의 슬롯(x′)이 함께 표시됨':'점선 x′와 흐린 점: dθ 뒤의 슬롯과 A',8,6);
+}
+
+/* ---------- Diagram: velocity increments over dθ ---------- */
+function drawDiag(){
+  const {W,H}=size(diag,dc); if(!W||!H) return;
+  dc.clearRect(0,0,W,H);
+  const b=20*D2R, dth=st.dth, dt=dth/st.w, x2=st.x+st.xd*dt;
+  const L1=st.xd, L2=st.x*st.w, L3=x2*st.w, Lm=st.w*(XMAX+st.xd*dt);
+  // fit (stable over playback)
+  const fitPts=[{x:0,y:0},mul(dir(b),L1*1.25),mul(dir(b+dth),L1*1.25),mul(dir(b+Math.PI/2),Lm*1.1),mul(dir(b+Math.PI/2+dth),Lm*1.1)];
+  const xs=fitPts.map(p=>p.x),ys=fitPts.map(p=>p.y),bw=Math.max(...xs)-Math.min(...xs),bh=Math.max(...ys)-Math.min(...ys);
+  const g=Math.min((W-70)/bw,(H-56)/bh), ox=W/2-g*(Math.max(...xs)+Math.min(...xs))/2, oy=H/2+g*(Math.max(...ys)+Math.min(...ys))/2;
+  const T=p=>({x:ox+g*p.x,y:oy-g*p.y}), O={x:ox,y:oy};
+  const ax=[[b,'x',L1*1.25],[b+dth,"x′",L1*1.25],[b+Math.PI/2,'y',Math.max(L3,L2)*1.1+12/g],[b+Math.PI/2+dth,"y′",Math.max(L3,L2)*1.1+12/g]];
+  ax.forEach(([a,n,l],i)=>{const e=T(mul(dir(a),l));dash(dc,O,e,C.muted,1,i%2?[3,4]:[7,5]);const t=T(mul(dir(a),l+14/g));label(dc,t.x,t.y,n,'',C.muted,15);});
+  // dθ arcs
+  const arcLab=(r,a)=>{dc.strokeStyle=C.muted;dc.lineWidth=1;dc.beginPath();dc.arc(ox,oy,r,-a-dth,-a);dc.stroke();const m=a+dth/2;label(dc,ox+(r+15)*Math.cos(m),oy-(r+15)*Math.sin(m),'dθ','',C.muted,14);};
+  arcLab(g*L1*.5,b);arcLab(Math.max(26,g*Math.min(L2,L3)*.35),b+Math.PI/2);
+  // vectors
+  const A1=mul(dir(b),L1),A2=mul(dir(b+dth),L1),B1=mul(dir(b+Math.PI/2),L2),Q=mul(dir(b+Math.PI/2+dth),L2),B2=mul(dir(b+Math.PI/2+dth),L3);
+  const vec=(p,col,w,al)=>{const s=T(p);dc.globalAlpha=al;arrow(dc,O.x,O.y,s.x-O.x,s.y-O.y,col,w);dc.globalAlpha=1;};
+  vec(A1,C.rel,2,.35);vec(B1,C.rot,2,.35);vec(A2,C.rel,2.8,1);vec(B2,C.rot,2.8,1);
+  {const p=T(mul(A1,.55)),n=dir(b-Math.PI/2);label(dc,p.x+n.x*16,p.y-n.y*16,'ẋ','(t)',C.rel,15);}
+  {const p=T(mul(A2,.62)),n=dir(b+dth+Math.PI/2);label(dc,p.x+n.x*16,p.y-n.y*16,'ẋ','(t+dt)',C.rel,15);}
+  {const p=T(mul(B1,.55)),n=dir(b);label(dc,p.x+n.x*22,p.y-n.y*22,'xω','',C.rot,15);}
+  {const p=T(mul(B2,.7)),n=dir(b+dth+Math.PI);label(dc,p.x+n.x*36,p.y-n.y*36,'(x+dx)ω','',C.rot,15);}
+  // increments
+  const inc=(p,q,col,txt,side,on)=>{if(!on)return;const a=T(p),c=T(q);if(col===C.cor)hl(dc,a,c,12);arrow(dc,a.x,a.y,c.x-a.x,c.y-a.y,col,2.6);
+    const dx=c.x-a.x,dy=c.y-a.y,l=Math.hypot(dx,dy)||1;label(dc,(a.x+c.x)/2+side*dy/l*24,(a.y+c.y)/2-side*dx/l*24,txt,'',col,15,true);};
+  inc(A1,A2,C.cor,'ẋ dθ',-1,st.inc[0]);
+  inc(B1,Q,C.cen,'xω dθ',-1,st.inc[2]);
+  inc(Q,B2,C.cor,'ω dx',1,st.inc[1]);
+  if(st.inc[1]&&!st.inc[2]){const q=T(Q);dc.fillStyle=C.muted;dc.beginPath();dc.arc(q.x,q.y,2.5,0,7);dc.fill();}
+}
+
+/* ---------- readouts ---------- */
+let lastR=0;
+function readouts(force){
+  const t=performance.now(); if(!force&&t-lastR<100) return; lastR=t;
+  const w=st.w,xd=st.xd,x=st.x,dth=st.dth,dt=dth/w,x2=x+xd*dt,f=v=>v.toFixed(1);
+  $('oVr').textContent=xd.toFixed(0)+' mm/s';$('oXw').textContent=(x*w).toFixed(0)+' mm/s';
+  $('o1').textContent=f(xd*w)+' mm/s²';$('o2').textContent=f(w*xd)+' mm/s²';$('oC').textContent=f(2*w*xd)+' mm/s²';$('oN').textContent=f(x*w*w)+' mm/s²';
+  const c=Math.cos(dth),s=Math.sin(dth),vy=(xd*s+x2*w*c-x*w)/dt,vx=-(xd*c-x2*w*s-xd)/dt;
+  $('fin').innerHTML=`그림의 dθ = ${(dth/D2R).toFixed(0)}° (dt = ${dt.toFixed(2)} s)로 직접 계산하면 y 방향 <b>${f(vy)}</b>, O 방향 <b>${f(vx)}</b> mm/s². dθ를 줄일수록 2ωẋ와 xω²에 가까워짐.`;
+  $('diagSub').textContent=`흐린 화살표: 시각 t, 진한 화살표: t+dt. dθ = ${(dth/D2R).toFixed(0)}°로 크게 그림`;
+}
+
+function draw(){drawStage();drawDiag();readouts();}
+
+function advance(dt){
+  st.th+=st.w*dt; st.x+=st.xd*dt;
+  if(st.x>XMAX){st.x=X0;st.trail=[];}
+  st.acc+=dt; if(st.acc>.04){st.acc=0;st.trail.push(mul(dir(st.th),st.x));if(st.trail.length>500)st.trail.shift();}
+}
+
+/* ---------- controls ---------- */
+const setPlay=p=>{st.playing=p;$('play').textContent=p?'일시정지':'재생';draw();};
+$('play').onclick=()=>setPlay(!st.playing);
+$('step').onclick=()=>{const dt=st.dth/st.w,n=Math.ceil(dt/.02);for(let i=0;i<n;i++)advance(dt/n);setPlay(false);readouts(true);};
+$('slow').onclick=()=>{st.slow=!st.slow;$('slow').setAttribute('aria-pressed',st.slow);};
+$('reset').onclick=()=>{st.x=X0;st.th=20*D2R;st.trail=[];draw();readouts(true);};
+[['tgV','showV'],['tgA','showA']].forEach(([id,k])=>$(id).onclick=()=>{st[k]=!st[k];$(id).setAttribute('aria-pressed',st[k]);draw();});
+[0,1,2].forEach(i=>$('t'+(i+1)).onclick=()=>{st.inc[i]=!st.inc[i];$('t'+(i+1)).setAttribute('aria-pressed',st.inc[i]);draw();});
+function bind(id,out,fmt,set){const e=$(id),u=()=>{set(+e.value);$(out).textContent=fmt(+e.value);};e.oninput=()=>{u();readouts(true);draw();};u();}
+bind('w','wO',v=>v.toFixed(2)+' rad/s',v=>st.w=v);
+bind('xd','xdO',v=>v+' mm/s',v=>st.xd=v);
+bind('dth','dthO',v=>v+'°',v=>st.dth=v*D2R);
+$('play').textContent=st.playing?'일시정지':'재생';
+
+new ResizeObserver(()=>draw()).observe(stage);
+new ResizeObserver(()=>draw()).observe(diag);
+let prev=performance.now();
+function loop(now){const dt=Math.min(.05,(now-prev)/1000);prev=now;if(st.playing){advance(dt*(st.slow?.25:1));draw();}requestAnimationFrame(loop);}
+draw();readouts(true);requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
