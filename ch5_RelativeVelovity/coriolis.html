@@ -44,6 +44,7 @@ canvas { display: block; width: 100%; height: 440px; touch-action: manipulation;
 .tg { font-family: var(--math); font-size: 14.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; min-height: 30px; }
 .tg[aria-pressed="true"] { color: var(--fg); border-color: currentColor; }
 .tg.cor[aria-pressed="true"] { color: var(--cor); } .tg.cen[aria-pressed="true"] { color: var(--cen); }
+.tg:disabled { opacity: .35; cursor: default; }
 .tg.abs[aria-pressed="true"] { color: var(--abs); } .tg.acc[aria-pressed="true"] { color: var(--fg); }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; min-width: 0; display: grid; gap: 8px; }
 .card h2 { font-size: 12.5px; color: var(--muted); font-weight: 500; margin: 0; }
@@ -110,9 +111,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--rot); outli
 
   <div class="main">
     <section class="panel">
-      <h2>회전하는 원판 (지면에서 본 모습)</h2>
+      <h2 id="stageTitle">회전하는 원판 (지면에서 본 모습)</h2>
       <p class="sub" id="stageSub">A의 속도 = 슬롯을 따라 ẋ + 슬롯의 회전에 의한 xω</p>
       <div class="toggles">
+        <button class="tg acc" id="gv0" aria-pressed="true">지면에서</button>
+        <button class="tg acc" id="gv1" aria-pressed="false">원판 위에서 (x-y)</button>
+        <span style="width:6px"></span>
         <button class="tg abs" id="tgV" aria-pressed="false">v<sub>A</sub> 합성</button>
         <button class="tg acc" id="tgA" aria-pressed="false">가속도 화살표</button>
       </div>
@@ -178,7 +182,7 @@ const $ = id => document.getElementById(id);
 const stage = $('stage'), sc = stage.getContext('2d'), diag = $('diag'), dc = diag.getContext('2d');
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const R = 250, X0 = 30, XMAX = 225, D2R = Math.PI/180;
-const st = { th: 20*D2R, x: 90, w: .4, xd: 60, dth: 20*D2R, playing: !reduce, slow: false, showV: false, showA: false, inc: [true, true, true], trail: [], acc: 0 };
+const st = { th: 20*D2R, x: 90, w: .4, xd: 60, dth: 20*D2R, view: 0, playing: !reduce, slow: false, showV: false, showA: false, inc: [true, true, true], trail: [], acc: 0 };
 const C = {};
 function colors(){ const s=getComputedStyle(document.documentElement); ['bg','panel','fg','muted','line','plate','plate-edge','slot','dot','rel','rot','cor','hl','abs','cen','math','sans'].forEach(n=>C[n]=s.getPropertyValue('--'+n).trim()); }
 colors();
@@ -213,12 +217,13 @@ function drawStage(){
   const {W,H}=size(stage,sc); if(!W||!H) return;
   sc.clearRect(0,0,W,H);
   const k=Math.min(W,H)/(2*(R+105)), O={x:W/2,y:H/2};
-  const T=p=>({x:O.x+k*p.x,y:O.y-k*p.y});
+  const ph=st.view?20*D2R-st.th:0, cp=Math.cos(ph), sp=Math.sin(ph);
+  const T=p=>({x:O.x+k*(p.x*cp-p.y*sp),y:O.y-k*(p.x*sp+p.y*cp)});
   const ex=dir(st.th), ey=dir(st.th+Math.PI/2), D=w=>add(mul(ex,w.x),mul(ey,w.y));
   // fixed axes
-  dash(sc,{x:O.x-k*(R+70),y:O.y},{x:O.x+k*(R+95),y:O.y},C.muted,1.1,[9,6]);
-  dash(sc,{x:O.x,y:O.y+k*(R+70)},{x:O.x,y:O.y-k*(R+95)},C.muted,1.1,[9,6]);
-  label(sc,O.x+k*(R+95)+10,O.y-10,'X','',C.muted,16);label(sc,O.x+12,O.y-k*(R+95)+4,'Y','',C.muted,16);
+  dash(sc,T({x:-(R+70),y:0}),T({x:R+95,y:0}),C.muted,1.1,[9,6]);
+  dash(sc,T({x:0,y:-(R+70)}),T({x:0,y:R+95}),C.muted,1.1,[9,6]);
+  {const p=T({x:R+110,y:0});label(sc,p.x,p.y,'X','',C.muted,16);const q=T({x:0,y:R+110});label(sc,q.x,q.y,'Y','',C.muted,16);}
   // disk
   sc.beginPath();sc.arc(O.x,O.y,k*R,0,7);sc.fillStyle=C.plate;sc.fill();sc.strokeStyle=C['plate-edge'];sc.lineWidth=1.4;sc.stroke();
   // slot
@@ -231,21 +236,21 @@ function drawStage(){
   // ghost at t+dθ when paused
   if(!st.playing){
     const dt=st.dth/st.w, x2=st.x+st.xd*dt, e2=dir(st.th+st.dth);
-    dash(sc,T(mul(e2,-R)),T(mul(e2,R+95)),C.muted,1,[3,4]);
-    const p=T(mul(e2,R+108));label(sc,p.x,p.y,"x′",'',C.muted,15);
-    if(x2<R){const g=T(mul(e2,x2));sc.globalAlpha=.45;sc.fillStyle=C.fg;sc.beginPath();sc.arc(g.x,g.y,5,0,7);sc.fill();sc.globalAlpha=1;
+    if(!st.view){dash(sc,T(mul(e2,-R)),T(mul(e2,R+95)),C.muted,1,[3,4]);
+    const p=T(mul(e2,R+108));label(sc,p.x,p.y,"x′",'',C.muted,15);}
+    if(x2<R){const g=T(mul(st.view?ex:e2,x2));sc.globalAlpha=.45;sc.fillStyle=C.fg;sc.beginPath();sc.arc(g.x,g.y,5,0,7);sc.fill();sc.globalAlpha=1;
       label(sc,g.x+16,g.y-12,'t+dt','',C.muted,12,false,false);}
   }
   // O
   sc.fillStyle=C.fg;sc.beginPath();sc.arc(O.x,O.y,3.5,0,7);sc.fill();
   {const p=T(D({x:-22,y:24}));label(sc,p.x,p.y,'O','',C.fg,16);}
   // ω arrow (fixed in ground)
-  {const r=k*(R+30),a0=-2.15,a1=-1.5;sc.strokeStyle=C.abs;sc.lineWidth=2.2;sc.beginPath();sc.arc(O.x,O.y,r,a0,a1);sc.stroke();
+  if(!st.view){const r=k*(R+30),a0=-2.15,a1=-1.5;sc.strokeStyle=C.abs;sc.lineWidth=2.2;sc.beginPath();sc.arc(O.x,O.y,r,a0,a1);sc.stroke();
    const e={x:O.x+r*Math.cos(a0),y:O.y+r*Math.sin(a0)},t={x:Math.sin(a0),y:-Math.cos(a0)};arrow(sc,e.x+t.x*8,e.y+t.y*8,-t.x*9,-t.y*9,C.abs,2.2);
    label(sc,O.x+r*Math.cos(-1.83),O.y+r*Math.sin(-1.83)-14,'ω = const','',C.abs,15);}
   // trail
-  sc.strokeStyle=C.abs;sc.lineWidth=1.6;const n=st.trail.length;
-  for(let i=1;i<n;i++){const a=T(st.trail[i-1]),b=T(st.trail[i]);sc.globalAlpha=.1+.5*i/n;sc.beginPath();sc.moveTo(a.x,a.y);sc.lineTo(b.x,b.y);sc.stroke();}
+  sc.strokeStyle=C.abs;sc.lineWidth=1.6;const n=st.trail.length,P=e=>st.view?T(D({x:e.x,y:0})):T(e.w);
+  for(let i=1;i<n;i++){const a=P(st.trail[i-1]),b=P(st.trail[i]);sc.globalAlpha=.1+.5*i/n;sc.beginPath();sc.moveTo(a.x,a.y);sc.lineTo(b.x,b.y);sc.stroke();}
   sc.globalAlpha=1;
   // ruler x
   {const off=-30,a=T(D({x:0,y:off})),b=T(D({x:st.x,y:off}));sc.strokeStyle=C.fg;sc.lineWidth=1;
@@ -254,21 +259,21 @@ function drawStage(){
    const m=T(D({x:st.x/2,y:off-18}));label(sc,m.x,m.y,'x','',C.fg,16);}
   // A
   const Aw=D({x:st.x,y:0}),A=T(Aw);
-  sc.save();sc.translate(A.x,A.y);sc.rotate(-st.th);sc.fillStyle=C.cor;sc.globalAlpha=.85;sc.fillRect(-7,-7,14,14);sc.globalAlpha=1;sc.strokeStyle=C.fg;sc.lineWidth=1.2;sc.strokeRect(-7,-7,14,14);sc.restore();
+  sc.save();sc.translate(A.x,A.y);sc.rotate(-(st.th+ph));sc.fillStyle=C.cor;sc.globalAlpha=.85;sc.fillRect(-7,-7,14,14);sc.globalAlpha=1;sc.strokeStyle=C.fg;sc.lineWidth=1.2;sc.strokeRect(-7,-7,14,14);sc.restore();
   // velocities
-  const vs=k*.95, vr=mul(ex,st.xd*vs), vw=mul(ey,st.x*st.w*vs), V=v=>({x:v.x,y:-v.y});
+  const vs=k*.95, vr=mul(ex,st.xd*vs), vw=mul(ey,st.x*st.w*vs), V=v=>({x:v.x*cp-v.y*sp,y:-(v.x*sp+v.y*cp)});
   const dR=V(vr),dW=V(vw);
-  if(st.showV){const s={x:dR.x+dW.x,y:dR.y+dW.y};dash(sc,{x:A.x+dR.x,y:A.y+dR.y},{x:A.x+s.x,y:A.y+s.y},C.muted,1,[4,4]);dash(sc,{x:A.x+dW.x,y:A.y+dW.y},{x:A.x+s.x,y:A.y+s.y},C.muted,1,[4,4]);
+  if(st.showV&&!st.view){const s={x:dR.x+dW.x,y:dR.y+dW.y};dash(sc,{x:A.x+dR.x,y:A.y+dR.y},{x:A.x+s.x,y:A.y+s.y},C.muted,1,[4,4]);dash(sc,{x:A.x+dW.x,y:A.y+dW.y},{x:A.x+s.x,y:A.y+s.y},C.muted,1,[4,4]);
     arrow(sc,A.x,A.y,s.x,s.y,C.abs,3.2);const l=Math.hypot(s.x,s.y)||1;label(sc,A.x+s.x+s.x/l*18,A.y+s.y+s.y/l*14,'v','A',C.abs,16,true,false);}
   arrow(sc,A.x,A.y,dR.x,dR.y,C.rel,2.8);
   {const l=Math.hypot(dR.x,dR.y)||1;label(sc,A.x+dR.x+dR.x/l*30,A.y+dR.y+dR.y/l*14,'ẋ','',C.rel,17);}
-  arrow(sc,A.x,A.y,dW.x,dW.y,C.rot,2.8);
-  {const l=Math.hypot(dW.x,dW.y)||1;label(sc,A.x+dW.x+dW.x/l*20,A.y+dW.y+dW.y/l*14,'xω','',C.rot,17);}
+  if(!st.view){arrow(sc,A.x,A.y,dW.x,dW.y,C.rot,2.8);
+  {const l=Math.hypot(dW.x,dW.y)||1;label(sc,A.x+dW.x+dW.x/l*20,A.y+dW.y+dW.y/l*14,'xω','',C.rot,17);}}
   // right angle
-  {const u=dir(st.th),v=dir(st.th+Math.PI/2),m=9,p1={x:A.x+u.x*m,y:A.y-u.y*m},p2={x:A.x+v.x*m,y:A.y-v.y*m},p3={x:p1.x+v.x*m,y:p1.y-v.y*m};
+  if(!st.view){const u=dir(st.th),v=dir(st.th+Math.PI/2),m=9,p1={x:A.x+u.x*m,y:A.y-u.y*m},p2={x:A.x+v.x*m,y:A.y-v.y*m},p3={x:p1.x+v.x*m,y:p1.y-v.y*m};
    sc.strokeStyle=C.muted;sc.lineWidth=1;sc.beginPath();sc.moveTo(p1.x,p1.y);sc.lineTo(p3.x,p3.y);sc.lineTo(p2.x,p2.y);sc.stroke();}
   // accelerations
-  if(st.showA){
+  if(st.showA&&!st.view){
     const lim=Math.min(W,H)*.32, ag=k*2.2;
     const cor=mul(ey,2*st.w*st.xd*ag), cen=mul(ex,-st.x*st.w*st.w*ag);
     const cl=v=>{const l=Math.hypot(v.x,v.y);return l>lim?mul(v,lim/l):v;};
@@ -276,10 +281,11 @@ function drawStage(){
     arrow(sc,A.x,A.y,dC.x,dC.y,C.cor,3.4);{const l=Math.hypot(dC.x,dC.y)||1;label(sc,A.x+dC.x+dC.x/l*10-dN.x*.0-24,A.y+dC.y+dC.y/l*16,'2ωẋ','',C.cor,16,true);}
     arrow(sc,A.x,A.y,dN.x,dN.y,C.cen,3.4);{const l=Math.hypot(dN.x,dN.y)||1;if(l>8){const u=dir(st.th+Math.PI/2);label(sc,A.x+dN.x*.6+u.x*15,A.y+dN.y*.6-u.y*15,'xω²','',C.cen,16,true);}}
   }
-  {const u=dir(st.th-Math.PI/2);label(sc,A.x+u.x*24,A.y-u.y*24,'A','',C.fg,16);}
+  {const u=dir(st.th+ph-Math.PI/2);label(sc,A.x+u.x*24,A.y-u.y*24,'A','',C.fg,16);}
+  if(st.view){const u=dir(st.th+ph+Math.PI/2);label(sc,A.x+u.x*34,A.y-u.y*34,'a','rel = 0',C.rel,16,true,false);}
   // hint
   sc.font=`500 12.5px ${C.sans}`;sc.textAlign='left';sc.textBaseline='top';sc.fillStyle=C.muted;
-  sc.fillText(st.playing?'일시정지하면 dθ 뒤의 슬롯(x′)이 함께 표시됨':'점선 x′와 흐린 점: dθ 뒤의 슬롯과 A',8,6);
+  sc.fillText(st.view?'원판이 멈춰 보이고, 지면 X-Y가 거꾸로 돎':(st.playing?'일시정지하면 dθ 뒤의 슬롯(x′)이 함께 표시됨':'점선 x′와 흐린 점: dθ 뒤의 슬롯과 A'),8,6);
 }
 
 /* ---------- Diagram: velocity increments over dθ ---------- */
@@ -332,7 +338,7 @@ function draw(){drawStage();drawDiag();readouts();}
 function advance(dt){
   st.th+=st.w*dt; st.x+=st.xd*dt;
   if(st.x>XMAX){st.x=X0;st.trail=[];}
-  st.acc+=dt; if(st.acc>.04){st.acc=0;st.trail.push(mul(dir(st.th),st.x));if(st.trail.length>500)st.trail.shift();}
+  st.acc+=dt; if(st.acc>.04){st.acc=0;st.trail.push({w:mul(dir(st.th),st.x),x:st.x});if(st.trail.length>500)st.trail.shift();}
 }
 
 /* ---------- controls ---------- */
@@ -342,6 +348,11 @@ $('step').onclick=()=>{const dt=st.dth/st.w,n=Math.ceil(dt/.02);for(let i=0;i<n;
 $('slow').onclick=()=>{st.slow=!st.slow;$('slow').setAttribute('aria-pressed',st.slow);};
 $('reset').onclick=()=>{st.x=X0;st.th=20*D2R;st.trail=[];draw();readouts(true);};
 [['tgV','showV'],['tgA','showA']].forEach(([id,k])=>$(id).onclick=()=>{st[k]=!st[k];$(id).setAttribute('aria-pressed',st[k]);draw();});
+const SUBS=['A의 속도 = 슬롯을 따라 ẋ + 슬롯의 회전에 의한 xω','x-y에서 A는 직선 등속운동만 함(a_rel = 0). 지면에서 보이는 가속도 2ωẋ, xω²는 좌표계가 회전해서 생김'];
+function setGV(v){st.view=v;$('gv0').setAttribute('aria-pressed',!v);$('gv1').setAttribute('aria-pressed',!!v);
+  $('stageTitle').textContent=v?'회전하는 원판 (원판과 함께 도는 x-y에서 본 모습)':'회전하는 원판 (지면에서 본 모습)';$('stageSub').textContent=SUBS[v];
+  $('tgV').disabled=$('tgA').disabled=!!v;draw();}
+$('gv0').onclick=()=>setGV(0);$('gv1').onclick=()=>setGV(1);
 [0,1,2].forEach(i=>$('t'+(i+1)).onclick=()=>{st.inc[i]=!st.inc[i];$('t'+(i+1)).setAttribute('aria-pressed',st.inc[i]);draw();});
 function bind(id,out,fmt,set){const e=$(id),u=()=>{set(+e.value);$(out).textContent=fmt(+e.value);};e.oninput=()=>{u();readouts(true);draw();};u();}
 bind('w','wO',v=>v.toFixed(2)+' rad/s',v=>st.w=v);
